@@ -73,6 +73,10 @@ void sensorsRead();
 void ldrSample();
 void pirCheck();
 
+// Shared actions
+void pressButton(uint8_t buttonIndex);
+void fetchWeather();
+
 // ── Load config from Preferences ─────────────────────────────
 void loadConfig() {
   prefs.begin(PREF_NAMESPACE, true);
@@ -102,60 +106,102 @@ void saveConfig() {
   prefs.end();
 }
 
+static String urlEncode(const char* src) {
+  String out;
+  const char* hex = "0123456789ABCDEF";
+  while (*src) {
+    const uint8_t c = (uint8_t)*src++;
+    if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') ||
+        (c >= '0' && c <= '9') || c == '-' || c == '_' || c == '.' || c == '~') {
+      out += (char)c;
+    } else if (c == ' ') {
+      out += "%20";
+    } else {
+      out += '%';
+      out += hex[(c >> 4) & 0x0F];
+      out += hex[c & 0x0F];
+    }
+  }
+  return out;
+}
+
+static bool isRainyWeatherCode(int code) {
+  switch (code) {
+    case 51: case 53: case 55:
+    case 56: case 57:
+    case 61: case 63: case 65:
+    case 66: case 67:
+    case 80: case 81: case 82:
+    case 95: case 96: case 99:
+      return true;
+    default:
+      return false;
+  }
+}
+
+void pressButton(uint8_t i) {
+  switch (i) {
+    case 0: // BTN_POWER — toggle sleep
+      isAsleep = !isAsleep;
+      if (isAsleep) {
+        currentState = STATE_SLEEPING;
+        animPlay(ANIM_SLEEPY);
+        buzzerMelody(3);
+      } else {
+        currentState = STATE_IDLE;
+        animPlay(ANIM_IDLE);
+        buzzerMelody(0);
+      }
+      break;
+
+    case 1: // BTN_SELECT — quick acknowledgement / weather peek
+      if (!isAsleep) {
+        animPlay(ANIM_BLINK);
+        buzzerTone(1200, 80);
+      }
+      break;
+
+    case 2: // BTN_INTERACT — pet Chordy
+      if (!isAsleep) {
+        currentState = STATE_VERY_HAPPY;
+        animPlay(ANIM_HEART_EYES);
+        buzzerMelody(1);
+        lastIdleChangeMs = millis();
+      }
+      break;
+
+    case 3: // BTN_EXTRA — set/cancel 25-min timer
+      if (!isAsleep) {
+        if (timerActive) {
+          timerActive = false;
+          buzzerTone(400, 200);
+        } else {
+          timerEndMs  = millis() + 25UL * 60UL * 1000UL;
+          timerActive = true;
+          currentState = STATE_TIMER_RUNNING;
+          buzzerMelody(2);
+        }
+      }
+      break;
+  }
+}
+
 // ── Button polling ────────────────────────────────────────────
 void handleButtons() {
   unsigned long now = millis();
   for (int i = 0; i < 4; i++) {
     bool reading = digitalRead(btns[i].pin);
+
     if (reading != btns[i].last) {
       btns[i].lastMs = now;
     }
+
     if ((now - btns[i].lastMs) > BTN_DEBOUNCE_MS) {
       if (reading == LOW && btns[i].last == HIGH) {
-        // Button pressed
-        switch (i) {
-          case 0: // BTN_POWER — toggle sleep
-            isAsleep = !isAsleep;
-            if (isAsleep) {
-              currentState = STATE_SLEEPING;
-              animPlay(ANIM_SLEEPY);
-              buzzerMelody(3);
-            } else {
-              currentState = STATE_IDLE;
-              animPlay(ANIM_IDLE);
-              buzzerMelody(0);
-            }
-            break;
-          case 1: // BTN_SELECT — cycle through weather info on display
-            if (!isAsleep) {
-              animPlay(ANIM_BLINK);
-              buzzerTone(1200, 80);
-            }
-            break;
-          case 2: // BTN_INTERACT — pet Chordy
-            if (!isAsleep) {
-              currentState = STATE_VERY_HAPPY;
-              animPlay(ANIM_HEART_EYES);
-              buzzerMelody(1);
-              lastIdleChangeMs = millis();
-            }
-            break;
-          case 3: // BTN_EXTRA — set/cancel 25-min timer
-            if (!isAsleep) {
-              if (timerActive) {
-                timerActive = false;
-                buzzerTone(400, 200);
-              } else {
-                timerEndMs  = millis() + 25UL * 60UL * 1000UL;
-                timerActive = true;
-                currentState = STATE_TIMER_RUNNING;
-                buzzerMelody(2);
-              }
-            }
-            break;
-        }
+        pressButton(i);
       }
     }
+
     btns[i].last = reading;
   }
 }
@@ -225,7 +271,7 @@ void stateMachineTick() {
       currentState = STATE_WEATHER_COLD;
       animPlay(ANIM_WEATHER_COLD);
       lastIdleChangeMs = now;
-    } else if (weatherData.conditionCode >= 500 && weatherData.conditionCode < 600 && currentState == STATE_IDLE) {
+    } else if (isRainyWeatherCode(weatherData.conditionCode) && currentState == STATE_IDLE) {
       currentState = STATE_WEATHER_RAINY;
       animPlay(ANIM_WEATHER_RAIN);
       lastIdleChangeMs = now;
@@ -348,29 +394,74 @@ void loop() {
 
 // ── fetchWeather() — called from loop ────────────────────────
 void fetchWeather() {
-  if (strlen(config.owmApiKey) == 0) return;
+  if (strlen(config.location) == 0) return;
+
   HTTPClient http;
-  char url[256];
-  snprintf(url, sizeof(url),
-    "http://%s%s?q=%s&appid=%s&units=metric",
-    WEATHER_API_HOST, WEATHER_API_PATH,
-    config.location, config.owmApiKey);
-  http.begin(url);
+  StaticJsonDocument<2048> doc;
+
+  String geocodeUrl = String("https://") + WEATHER_GEOCODE_HOST + WEATHER_GEOCODE_PATH +
+                      "?name=" + urlEncode(config.location) + "&count=1&language=en&format=json";
+
+  http.begin(geocodeUrl);
   int code = http.GET();
-  if (code == 200) {
-    String body = http.getString();
-    StaticJsonDocument<1024> doc;
-    if (!deserializeJson(doc, body)) {
-      weatherData.tempC         = doc["main"]["temp"] | 0.0f;
-      weatherData.windKph       = (float)(doc["wind"]["speed"] | 0.0f) * 3.6f;
-      weatherData.conditionCode = doc["weather"][0]["id"] | 800;
-      strlcpy(weatherData.description,
-              doc["weather"][0]["description"] | "n/a",
-              sizeof(weatherData.description));
-      weatherData.valid = true;
-      Serial.printf("[Chordy] Weather: %.1f°C  %s\n",
-                    weatherData.tempC, weatherData.description);
-    }
+  if (code != 200) {
+    Serial.printf("[Chordy] Geocoding failed: HTTP %d\n", code);
+    http.end();
+    return;
   }
+
+  String body = http.getString();
   http.end();
+
+  if (deserializeJson(doc, body)) {
+    Serial.println("[Chordy] Geocoding JSON parse failed");
+    return;
+  }
+
+  JsonArray results = doc["results"].as<JsonArray>();
+  if (results.isNull() || results.size() == 0) {
+    Serial.printf("[Chordy] No geocoding result for '%s'\n", config.location);
+    return;
+  }
+
+  const float latitude  = results[0]["latitude"]  | 0.0f;
+  const float longitude = results[0]["longitude"] | 0.0f;
+
+  doc.clear();
+  char forecastUrl[320];
+  snprintf(forecastUrl, sizeof(forecastUrl),
+           "https://%s%s?latitude=%.4f&longitude=%.4f&current=temperature_2m,wind_speed_10m,weather_code&wind_speed_unit=kmh&temperature_unit=celsius",
+           WEATHER_API_HOST, WEATHER_API_PATH, latitude, longitude);
+
+  http.begin(forecastUrl);
+  code = http.GET();
+  if (code != 200) {
+    Serial.printf("[Chordy] Forecast failed: HTTP %d\n", code);
+    http.end();
+    return;
+  }
+
+  body = http.getString();
+  http.end();
+
+  if (deserializeJson(doc, body)) {
+    Serial.println("[Chordy] Forecast JSON parse failed");
+    return;
+  }
+
+  JsonObject current = doc["current"];
+  if (current.isNull()) {
+    Serial.println("[Chordy] Forecast response missing current weather");
+    return;
+  }
+
+  weatherData.tempC         = current["temperature_2m"] | 0.0f;
+  weatherData.windKph       = current["wind_speed_10m"] | 0.0f;
+  weatherData.conditionCode = current["weather_code"] | 0;
+  snprintf(weatherData.description, sizeof(weatherData.description),
+           "WMO %d", weatherData.conditionCode);
+  weatherData.valid = true;
+
+  Serial.printf("[Chordy] Open-Meteo: %.1f°C  code=%d  (%s)\n",
+                weatherData.tempC, weatherData.conditionCode, config.location);
 }

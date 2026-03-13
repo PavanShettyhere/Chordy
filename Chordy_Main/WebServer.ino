@@ -13,10 +13,12 @@ extern RobotState  currentState;
 extern AnimID      forcedAnim;
 extern bool        timerActive;
 extern unsigned long timerEndMs;
+void pressButton(uint8_t buttonIndex);
 
 static bool _apMode = false;
 
 // ── Forward decls ─────────────────────────────────────────────
+void handleDashboard();
 void handleRoot();
 void handleSetup();
 void handleSave();
@@ -25,6 +27,29 @@ void handleSettings();
 void handleSaveSettings();
 void handleTrigger();
 void handleSetTimer();
+void handleButtonPress();
+
+void handleButtonPress() {
+  if (!webServer.hasArg("plain")) {
+    webServer.send(400, "application/json", "{\"ok\":false}");
+    return;
+  }
+
+  StaticJsonDocument<96> doc;
+  if (deserializeJson(doc, webServer.arg("plain"))) {
+    webServer.send(400, "application/json", "{\"ok\":false}");
+    return;
+  }
+
+  int buttonId = doc["button"] | -1;
+  if (buttonId < 0 || buttonId > 3) {
+    webServer.send(400, "application/json", "{\"ok\":false}");
+    return;
+  }
+
+  pressButton((uint8_t)buttonId);
+  webServer.send(200, "application/json", "{\"ok\":true}");
+}
 void handleNotFound();
 
 // ──────────────────────────────────────────────────────────────
@@ -51,6 +76,7 @@ void webServerInit(bool apMode) {
   webServer.on("/api/settings",      HTTP_POST, handleSaveSettings);
   webServer.on("/api/trigger",       HTTP_POST, handleTrigger);
   webServer.on("/api/timer",         HTTP_POST, handleSetTimer);
+  webServer.on("/api/button",        HTTP_POST, handleButtonPress);
   webServer.onNotFound(handleNotFound);
   webServer.begin();
   Serial.println("[Web] HTTP server started");
@@ -94,8 +120,8 @@ void handleSetup() {
     <input name="pass" type="password" placeholder="••••••••">
     <label>Location (for weather)</label>
     <input name="location" placeholder="London">
-    <label>OpenWeatherMap API Key</label>
-    <input name="owmkey" placeholder="(optional)">
+    <label>Weather Provider</label>
+    <input value="Open-Meteo (no API key needed)" disabled>
     <button type="submit">▶ INITIALIZE CHORDY</button>
   </form>
 </div></body></html>
@@ -142,6 +168,7 @@ void handleTelemetry() {
     "\"weather_temp\":%.1f,"
     "\"weather_wind\":%.1f,"
     "\"weather_desc\":\"%s\","
+    "\"weather_code\":%d,"
     "\"weather_valid\":%s,"
     "\"state\":%d,"
     "\"timer_active\":%s,"
@@ -151,6 +178,7 @@ void handleTelemetry() {
     sensorData.pirMotion ? "true" : "false",
     weatherData.tempC, weatherData.windKph,
     weatherData.description,
+    weatherData.conditionCode,
     weatherData.valid ? "true" : "false",
     (int)currentState,
     timerActive ? "true" : "false",
@@ -220,7 +248,5 @@ void handleNotFound() {
 // Full Sci-Fi / Cyberpunk Dashboard
 // ──────────────────────────────────────────────────────────────
 void handleDashboard() {
-  // Served as a single large HTML string
-  // The full page is defined in WebDashboard.h to keep this file manageable
-  webServer.send(200, "text/html", DASHBOARD_HTML);
+  webServer.send_P(200, "text/html", DASHBOARD_HTML);
 }

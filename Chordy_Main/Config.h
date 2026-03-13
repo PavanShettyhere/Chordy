@@ -51,10 +51,12 @@
 #define PREF_NAMESPACE  "chordy"
 
 // ── Weather API ──────────────────────────────────────────────
-#define WEATHER_API_HOST  "api.openweathermap.org"
-#define WEATHER_API_PATH  "/data/2.5/weather"
-#define TEMP_HOT_C        28.0f
-#define TEMP_COLD_C       15.0f
+#define WEATHER_GEOCODE_HOST  "geocoding-api.open-meteo.com"
+#define WEATHER_GEOCODE_PATH  "/v1/search"
+#define WEATHER_API_HOST      "api.open-meteo.com"
+#define WEATHER_API_PATH      "/v1/forecast"
+#define TEMP_HOT_C            28.0f
+#define TEMP_COLD_C           15.0f
 
 // ──────────────────────────────────────────────────────────────
 //  Data Structures
@@ -65,7 +67,7 @@ struct CConfig {
   char  wifiSSID[64]    = "";
   char  wifiPass[64]    = "";
   char  location[64]    = "London";
-  char  owmApiKey[48]   = "";
+  char  owmApiKey[48]   = "";  // kept for backward compatibility; no longer used by Open-Meteo
   uint8_t eyeR          = 0;
   uint8_t eyeG          = 255;
   uint8_t eyeB          = 200;
