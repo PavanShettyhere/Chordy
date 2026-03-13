@@ -14,6 +14,7 @@ extern AnimID        forcedAnim;
 extern bool          timerActive;
 extern unsigned long timerEndMs;
 extern unsigned long timerTotalMs;
+extern unsigned long configuredTimerMs;
 extern bool          isAsleep;
 extern DisplayScreen currentScreen;
 extern void          factoryReset();
@@ -121,32 +122,34 @@ void handleTelemetry() {
   }
 
   char json[768];
-  snprintf(json, sizeof(json),
-    "{"
-    "\"temp_c\":%.1f,\"humidity\":%.0f,\"ldr\":%d,\"pir\":%s,"
-    "\"weather_temp\":%.1f,\"weather_wind\":%.1f,\"weather_desc\":\"%s\","
-    "\"weather_code\":%d,\"weather_valid\":%s,"
-    "\"state\":%d,\"screen\":%d,"
-    "\"timer_active\":%s,\"timer_remaining\":%lu,\"timer_total\":%lu,"
-    "\"buzzer\":%s,\"buz_vol\":%d,\"anim_speed\":%d,"
-    "\"eye_style\":%d,\"bot_name\":\"%s\",\"location\":\"%s\","
-    "\"time\":\"%s\",\"date\":\"%s\","
-    "\"eye_r\":%d,\"eye_g\":%d,\"eye_b\":%d"
-    "}",
-    sensorData.tempC, sensorData.humidity, sensorData.ldrRaw,
-    sensorData.pirMotion ? "true":"false",
-    weatherData.tempC, weatherData.windKph, weatherData.description,
-    weatherData.conditionCode, weatherData.valid ? "true":"false",
-    (int)currentState, (int)currentScreen,
-    timerActive ? "true":"false",
-    timerActive ? (timerEndMs - millis()) / 1000 : 0UL,
-    timerTotalMs / 1000,
-    config.buzzerEnabled ? "true":"false",
-    config.buzzerVolume, config.animSpeed,
-    config.eyeStyle, config.botName, config.location,
-    timeBuf, dateBuf,
-    config.eyeR, config.eyeG, config.eyeB
-  );
+snprintf(json, sizeof(json),
+  "{"
+  "\"temp_c\":%.1f,\"humidity\":%.0f,\"ldr\":%d,\"pir\":%s,"
+  "\"weather_temp\":%.1f,\"weather_wind\":%.1f,\"weather_desc\":\"%s\","
+  "\"weather_code\":%d,\"weather_valid\":%s,"
+  "\"state\":%d,\"screen\":%d,"
+  "\"timer_active\":%s,\"timer_remaining\":%lu,\"timer_total\":%lu,"
+  "\"configured_timer\":%lu,"
+  "\"buzzer\":%s,\"buz_vol\":%d,\"anim_speed\":%d,"
+  "\"eye_style\":%d,\"bot_name\":\"%s\",\"location\":\"%s\","
+  "\"time\":\"%s\",\"date\":\"%s\","
+  "\"eye_r\":%d,\"eye_g\":%d,\"eye_b\":%d"
+  "}",
+  sensorData.tempC, sensorData.humidity, sensorData.ldrRaw,
+  sensorData.pirMotion ? "true":"false",
+  weatherData.tempC, weatherData.windKph, weatherData.description,
+  weatherData.conditionCode, weatherData.valid ? "true":"false",
+  (int)currentState, (int)currentScreen,
+  timerActive ? "true":"false",
+  timerActive ? (timerEndMs - millis()) / 1000 : 0UL,
+  timerTotalMs / 1000,
+  configuredTimerMs / 1000,
+  config.buzzerEnabled ? "true":"false",
+  config.buzzerVolume, config.animSpeed,
+  config.eyeStyle, config.botName, config.location,
+  timeBuf, dateBuf,
+  config.eyeR, config.eyeG, config.eyeB
+);
   webServer.sendHeader("Access-Control-Allow-Origin", "*");
   webServer.send(200, "application/json", json);
 }
@@ -187,23 +190,45 @@ void handleTrigger() {
 
 // ── Set timer (with seconds support) ─────────────────────────
 void handleSetTimer() {
-  if (!webServer.hasArg("plain")) { webServer.send(400,"application/json","{\"ok\":false}"); return; }
-  StaticJsonDocument<128> doc;
-  if (!deserializeJson(doc, webServer.arg("plain"))) {
-    int mins = doc["minutes"] | 0;
-    int secs = doc["seconds"] | 0;
-    unsigned long totalMs = (unsigned long)mins * 60000UL + (unsigned long)secs * 1000UL;
-    if (totalMs > 0) {
-      timerTotalMs = totalMs;
-      timerEndMs   = millis() + totalMs;
-      timerActive  = true;
-    } else {
-      timerActive = false;
-    }
-    webServer.send(200, "application/json", "{\"ok\":true}");
+  if (!webServer.hasArg("plain")) {
+    webServer.send(400, "application/json", "{\"ok\":false}");
     return;
   }
-  webServer.send(400, "application/json", "{\"ok\":false}");
+
+  StaticJsonDocument<128> doc;
+  if (deserializeJson(doc, webServer.arg("plain"))) {
+    webServer.send(400, "application/json", "{\"ok\":false}");
+    return;
+  }
+
+  int mins = doc["minutes"] | 0;
+  int secs = doc["seconds"] | 0;
+
+  if (mins < 0) mins = 0;
+  if (secs < 0) secs = 0;
+  if (secs > 59) secs = 59;
+
+  configuredTimerMs = (unsigned long)mins * 60000UL + (unsigned long)secs * 1000UL;
+
+  if (configuredTimerMs > 0) {
+    timerTotalMs   = configuredTimerMs;
+    timerEndMs     = millis() + timerTotalMs;
+    timerActive    = true;
+    currentState   = STATE_TIMER_RUNNING;
+    currentScreen  = SCREEN_FACE;
+    animPlay(ANIM_THINKING);
+    if (config.buzzerEnabled) buzzerMelody(2);
+  } else {
+    timerActive    = false;
+    timerTotalMs   = 0;
+    timerEndMs     = 0;
+    currentState   = STATE_IDLE;
+    currentScreen  = SCREEN_FACE;
+    animPlay(ANIM_IDLE);
+    if (config.buzzerEnabled) buzzerTone(400, 200);
+  }
+
+  webServer.send(200, "application/json", "{\"ok\":true}");
 }
 
 // ── Virtual button press from web ─────────────────────────────
@@ -232,10 +257,14 @@ void handleVirtualButton() {
           timerActive = false;
           if (config.buzzerEnabled) buzzerTone(400, 200);
         } else {
-          timerTotalMs = 25UL * 60UL * 1000UL;
-          timerEndMs   = millis() + timerTotalMs;
-          timerActive  = true;
-          if (config.buzzerEnabled) buzzerMelody(2);
+          if (configuredTimerMs == 0) configuredTimerMs = 25UL * 60UL * 1000UL;
+              timerTotalMs = configuredTimerMs;
+              timerEndMs   = millis() + timerTotalMs;
+              timerActive  = true;
+              currentState = STATE_TIMER_RUNNING;
+              currentScreen = SCREEN_FACE;
+              animPlay(ANIM_THINKING);
+              if (config.buzzerEnabled) buzzerMelody(2);
         }
         break;
     }
