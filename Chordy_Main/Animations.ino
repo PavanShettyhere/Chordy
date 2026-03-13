@@ -418,15 +418,25 @@ void animTick() {
 // ──────────────────────────────────────────────────────────────
 //  Buzzer helpers
 // ──────────────────────────────────────────────────────────────
+// ──────────────────────────────────────────────────────────────
+//  Buzzer helpers (Updated for ESP32 Core 3.0+)
+// ──────────────────────────────────────────────────────────────
 void buzzerTone(int freq, int durationMs) {
-  ledcSetup(0, freq, 8);
-  ledcAttachPin(BUZZER_PIN, 0);
-  ledcWrite(0, 128);
+  if (freq > 0) {
+    // New Syntax: ledcAttach(pin, frequency, resolution)
+    ledcAttach(BUZZER_PIN, freq, 10); 
+    ledcWriteTone(BUZZER_PIN, freq);
+  } else {
+    ledcWriteTone(BUZZER_PIN, 0);
+  }
+
   unsigned long start = millis();
   while (millis() - start < (unsigned long)durationMs) {
-    webServerTick(); // keep network alive during tone
+    webServerTick(); // Keep network and animations alive
   }
-  ledcWrite(0, 0);
+  
+  ledcWriteTone(BUZZER_PIN, 0);
+  ledcDetach(BUZZER_PIN); // Release the pin
 }
 
 // Melody IDs:
@@ -444,6 +454,7 @@ void buzzerMelody(int id) {
 
   const Note* notes = nullptr;
   int len = 0;
+  
   switch(id) {
     case 0: notes = startup;  len = 6; break;
     case 1: notes = happy;    len = 3; break;
@@ -452,19 +463,24 @@ void buzzerMelody(int id) {
     case 4: notes = alarm;    len = 5; break;
     case 5: notes = scared;   len = 5; break;
   }
+  
   if (!notes) return;
 
-  ledcSetup(0, 1000, 8);
-  ledcAttachPin(BUZZER_PIN, 0);
   for (int i = 0; i < len; i++) {
     if (notes[i].freq == 0) {
-      ledcWrite(0, 0);
+      ledcWriteTone(BUZZER_PIN, 0);
     } else {
-      ledcWriteTone(0, notes[i].freq);
-      ledcWrite(0, 128);
+      // Use the new simplified tone command
+      ledcAttach(BUZZER_PIN, notes[i].freq, 10);
+      ledcWriteTone(BUZZER_PIN, notes[i].freq);
     }
+    
     unsigned long s = millis();
-    while (millis() - s < (unsigned long)notes[i].dur) webServerTick();
+    while (millis() - s < (unsigned long)notes[i].dur) {
+      webServerTick();
+    }
+    ledcWriteTone(BUZZER_PIN, 0);
+    delay(20); // Short gap between notes for clarity
   }
-  ledcWrite(0, 0);
+  ledcDetach(BUZZER_PIN);
 }

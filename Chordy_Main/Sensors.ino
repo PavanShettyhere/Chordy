@@ -8,7 +8,6 @@ extern SensorData sensorData;
 
 // ──────────────────────────────────────────────────────────────
 void sensorsInit() {
-  dht.begin();
   pinMode(PIR_PIN, INPUT);
   pinMode(LDR_PIN, INPUT);  // ADC on GPIO34
   Serial.println("[Sensors] Initialized DHT11, LDR, PIR");
@@ -17,8 +16,8 @@ void sensorsInit() {
 // ──────────────────────────────────────────────────────────────
 void sensorsRead() {
   // --- DHT11 ---
-  float t = dht.readTemperature();
-  float h = dht.readHumidity();
+  float t = dht11.readTemperature();
+  float h = dht11.readHumidity();
   if (!isnan(t)) sensorData.tempC    = t;
   if (!isnan(h)) sensorData.humidity = h;
 

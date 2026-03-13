@@ -4,6 +4,7 @@
 // ============================================================
 
 #include "Config.h"
+#include "WebDashboard.h"
 
 extern CConfig     config;
 extern SensorData  sensorData;
@@ -221,6 +222,5 @@ void handleNotFound() {
 void handleDashboard() {
   // Served as a single large HTML string
   // The full page is defined in WebDashboard.h to keep this file manageable
-  extern const char DASHBOARD_HTML[];
   webServer.send(200, "text/html", DASHBOARD_HTML);
 }
