@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chordy Emotion Builder</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+:root{
+  --c:#00ffe7;--c2:#ff2d78;--c3:#7b2fff;--c4:#ffaa00;
+  --bg:#030912;--bg2:#061525;--border:rgba(0,255,231,0.18);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--c);font-family:'Share Tech Mono',monospace;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;pointer-events:none;
+  background-image:linear-gradient(rgba(0,255,231,0.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,255,231,0.02) 1px,transparent 1px);
+  background-size:30px 30px}
+.wrap{position:relative;z-index:1;max-width:1200px;margin:0 auto;padding:28px 20px}
+
+header{text-align:center;margin-bottom:36px}
+header h1{font-family:'Orbitron',sans-serif;font-size:2.2rem;font-weight:900;letter-spacing:8px;
+  color:var(--c);text-shadow:0 0 30px rgba(0,255,231,0.4)}
+header p{color:rgba(0,255,231,0.45);font-size:.8rem;letter-spacing:3px;margin-top:8px}
+
+.main-layout{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+@media(max-width:900px){.main-layout{grid-template-columns:1fr}}
+
+.card{background:rgba(6,21,37,0.8);border:1px solid var(--border);border-radius:14px;padding:22px;
+  position:relative;overflow:hidden}
+.card::before{content:'';position:absolute;top:0;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(0,255,231,0.4),transparent)}
+.card-title{font-family:'Orbitron',sans-serif;font-size:.65rem;letter-spacing:3px;
+  color:rgba(0,255,231,0.5);margin-bottom:16px;display:flex;align-items:center;gap:8px}
+.card-title::after{content:'';flex:1;height:1px;background:linear-gradient(90deg,rgba(0,255,231,0.2),transparent)}
+
+/* OLED Pixel Editor */
+#pixelGrid{
+  display:grid;grid-template-columns:repeat(128,1fr);
+  width:512px;height:256px;background:#000;cursor:crosshair;
+  border:2px solid rgba(0,255,231,0.3);border-radius:6px;
+  image-rendering:pixelated;flex-shrink:0;
+}
+@media(max-width:600px){#pixelGrid{width:320px;height:160px}}
+.cell{background:#000;transition:none}
+.cell.on{background:#fff}
+.cell:hover{opacity:.7}
+
+.oled-preview-wrap{display:flex;flex-direction:column;align-items:center;gap:12px}
+.oled-label{font-size:.65rem;color:rgba(0,255,231,0.4);letter-spacing:2px}
+
+/* Timeline */
+.timeline{margin-top:16px}
+.frame-strip{display:flex;gap:6px;overflow-x:auto;padding:6px 0;min-height:80px}
+.frame-thumb{width:60px;height:30px;background:#000;border:2px solid rgba(0,255,231,0.2);
+  border-radius:4px;cursor:pointer;flex-shrink:0;position:relative;overflow:hidden;
+  image-rendering:pixelated}
+.frame-thumb.active{border-color:var(--c);box-shadow:0 0 8px rgba(0,255,231,0.3)}
+.frame-num{position:absolute;bottom:2px;right:3px;font-size:8px;color:rgba(0,255,231,0.5);font-family:'Share Tech Mono'}
+.frame-delete{position:absolute;top:1px;right:2px;font-size:9px;cursor:pointer;color:#ff2d78;display:none}
+.frame-thumb:hover .frame-delete{display:block}
+
+/* Controls */
+.ctrl-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.btn{background:rgba(0,255,231,0.06);border:1px solid rgba(0,255,231,0.3);border-radius:8px;
+  padding:8px 14px;color:var(--c);font-family:'Orbitron',sans-serif;font-size:.6rem;
+  font-weight:700;letter-spacing:1.5px;cursor:pointer;transition:all .18s;white-space:nowrap}
+.btn:hover{background:rgba(0,255,231,0.16);box-shadow:0 0 10px rgba(0,255,231,0.2)}
+.btn-red{background:rgba(255,45,120,0.07);border-color:rgba(255,45,120,0.4);color:var(--c2)}
+.btn-red:hover{background:rgba(255,45,120,0.2)}
+.btn-grn{background:rgba(0,255,136,0.07);border-color:rgba(0,255,136,0.4);color:#00ff88}
+.btn-grn:hover{background:rgba(0,255,136,0.2)}
+.btn-pur{background:rgba(123,47,255,0.07);border-color:rgba(123,47,255,0.4);color:var(--c3)}
+.btn-pur:hover{background:rgba(123,47,255,0.2)}
+.btn-big{padding:12px 24px;font-size:.7rem}
+
+input[type=text],input[type=number],select{
+  background:rgba(0,0,0,0.4);border:1px solid rgba(0,255,231,0.2);border-radius:8px;
+  padding:8px 12px;color:var(--c);font-family:'Share Tech Mono',monospace;font-size:.85rem;
+  outline:none;transition:border-color .2s}
+input:focus,select:focus{border-color:var(--c)}
+.fl{font-size:.65rem;color:rgba(0,255,231,0.5);letter-spacing:2px;margin-bottom:5px;margin-top:10px}
+
+/* Buzzer score editor */
+.note-row{display:grid;grid-template-columns:auto auto auto 28px;gap:6px;align-items:center;margin-bottom:6px}
+.note-row input{width:100%}
+.note-remove{color:#ff2d78;cursor:pointer;font-size:1.1rem;text-align:center}
+
+/* Code output */
+#codeOutput{
+  background:#000;border:1px solid rgba(0,255,231,0.15);border-radius:8px;
+  padding:16px;font-size:.75rem;line-height:1.7;color:#88ffee;
+  white-space:pre;overflow-x:auto;min-height:200px;max-height:400px;overflow-y:auto;
+  tab-size:2;
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+<header>
+  <h1>CHORDY EMOTION BUILDER</h1>
+  <p>Design animations frame-by-frame · Generate Arduino code · Paste into Animations.ino</p>
+</header>
+
+<div class="main-layout">
+
+<!-- ── LEFT: PIXEL EDITOR ─────────────────────────────── -->
+<div>
+  <div class="card">
+    <div class="card-title">OLED Pixel Editor  <span style="color:rgba(0,255,231,0.3);font-size:.6rem">128×64 pixels</span></div>
+
+    <div class="oled-preview-wrap">
+      <div class="oled-label">EDIT FRAME</div>
+      <canvas id="pixelCanvas" width="512" height="256"
+        style="background:#000;border:2px solid rgba(0,255,231,0.3);border-radius:6px;cursor:crosshair;image-rendering:pixelated"></canvas>
+    </div>
+
+    <!-- Tools -->
+    <div class="ctrl-row" style="margin-top:12px">
+      <button class="btn" id="toolDraw" onclick="setTool('draw')" style="background:rgba(0,255,231,0.12);border-color:var(--c)">✏ DRAW</button>
+      <button class="btn" id="toolErase" onclick="setTool('erase')">◻ ERASE</button>
+      <button class="btn" onclick="fillAll()">⬛ FILL</button>
+      <button class="btn btn-red" onclick="clearFrame()">🗑 CLEAR</button>
+      <button class="btn" onclick="invertFrame()">⬜ INVERT</button>
+    </div>
+    <div class="ctrl-row">
+      <button class="btn" onclick="shiftFrame(-1,0)">← SHIFT</button>
+      <button class="btn" onclick="shiftFrame(1,0)">→ SHIFT</button>
+      <button class="btn" onclick="shiftFrame(0,-1)">↑ SHIFT</button>
+      <button class="btn" onclick="shiftFrame(0,1)">↓ SHIFT</button>
+      <button class="btn" onclick="copyFrame()">📋 COPY</button>
+      <button class="btn" onclick="pasteFrame()">📌 PASTE</button>
+    </div>
+
+    <!-- Presets (quick eye templates) -->
+    <div class="fl">EYE PRESETS</div>
+    <div class="ctrl-row">
+      <button class="btn btn-pur" onclick="preset('idle')">😐 IDLE</button>
+      <button class="btn btn-pur" onclick="preset('happy')">😊 HAPPY</button>
+      <button class="btn btn-pur" onclick="preset('scared')">😱 SCARED</button>
+      <button class="btn btn-pur" onclick="preset('sleepy')">😴 SLEEPY</button>
+      <button class="btn btn-pur" onclick="preset('squint')">😑 SQUINT</button>
+      <button class="btn btn-pur" onclick="preset('heart')">❤ HEARTS</button>
+    </div>
+
+    <!-- Frame timeline -->
+    <div class="card-title" style="margin-top:16px">FRAME TIMELINE</div>
+    <div class="frame-strip" id="frameStrip"></div>
+    <div class="ctrl-row" style="margin-top:10px">
+      <button class="btn btn-grn" onclick="addFrame()">+ ADD FRAME</button>
+      <button class="btn btn-grn" onclick="duplicateFrame()">⧉ DUPLICATE</button>
+      <button class="btn" id="playBtn" onclick="togglePlay()">▶ PLAY</button>
+      <label style="font-size:.7rem;color:rgba(0,255,231,0.6)">
+        FPS: <input type="number" id="fpsInput" value="8" min="1" max="30" style="width:50px">
+      </label>
+    </div>
+  </div>
+</div>
+
+<!-- ── RIGHT: SETTINGS + SOUND + CODE ────────────────── -->
+<div style="display:flex;flex-direction:column;gap:16px">
+
+  <!-- Emotion meta -->
+  <div class="card">
+    <div class="card-title">Emotion Settings</div>
+    <div class="fl">ANIMATION ID NAME</div>
+    <input type="text" id="animName" value="MY_EMOTION" style="width:100%;text-transform:uppercase">
+    <div class="fl">FRAME DELAY (ms) — lower = faster</div>
+    <input type="number" id="frameDelay" value="120" min="20" max="2000" style="width:100%">
+    <div class="fl">LOOP?</div>
+    <select id="animLoop" style="width:100%">
+      <option value="true">Yes — loops continuously</option>
+      <option value="false">No — plays once then idles</option>
+    </select>
+    <div class="fl">AUTO-RETURN AFTER (frames, 0=never)</div>
+    <input type="number" id="autoReturn" value="60" min="0" max="500" style="width:100%">
+    <div class="fl">TRIGGER SOUND MELODY ID</div>
+    <select id="melodyId" style="width:100%">
+      <option value="-1">No sound</option>
+      <option value="0">Startup jingle</option>
+      <option value="1">Happy</option>
+      <option value="2">Timer set</option>
+      <option value="3">Sleep</option>
+      <option value="4">Alarm</option>
+      <option value="5">Scared</option>
+      <option value="6">Guitar strum</option>
+      <option value="7">Whistle</option>
+      <option value="8">Coffee sip</option>
+      <option value="9">Magnify</option>
+    </select>
+  </div>
+
+  <!-- Buzzer melody builder -->
+  <div class="card">
+    <div class="card-title">Buzzer Melody Builder</div>
+    <div id="noteList"></div>
+    <button class="btn btn-grn" onclick="addNote()" style="margin-top:8px">+ ADD NOTE</button>
+    <button class="btn" onclick="addNote(0)" style="margin-left:8px">+ SILENCE</button>
+    <div class="fl" style="margin-top:12px">PREVIEW (browser)</div>
+    <button class="btn" onclick="previewMelody()">▶ PLAY PREVIEW</button>
+    <button class="btn btn-red" onclick="clearNotes()" style="margin-left:8px">🗑 CLEAR</button>
+  </div>
+
+  <!-- Generated code -->
+  <div class="card">
+    <div class="card-title">Generated Arduino Code</div>
+    <div class="ctrl-row">
+      <button class="btn btn-big btn-grn" onclick="generateCode()">⚡ GENERATE CODE</button>
+      <button class="btn btn-big" onclick="copyCode()">📋 COPY</button>
+    </div>
+    <div style="margin-top:12px;font-size:.7rem;color:rgba(0,255,231,0.4);margin-bottom:8px">
+      Paste the output into Animations.ino at the marked spots
+    </div>
+    <pre id="codeOutput">// Click GENERATE CODE to produce Arduino code</pre>
+  </div>
+
+  <!-- Integration guide -->
+  <div class="card">
+    <div class="card-title">Integration Guide</div>
+    <div style="font-size:.74rem;line-height:1.8;color:rgba(0,255,231,0.65)">
+      <strong style="color:var(--c)">Step 1</strong> — Add to <code>AnimID</code> enum in Config.h:<br>
+      <code style="color:#ffaa00">  ANIM_&lt;YOUR_NAME&gt;,  // before ANIM_COUNT</code><br><br>
+      <strong style="color:var(--c)">Step 2</strong> — In <code>animPlay()</code>, add a case:<br>
+      <code style="color:#ffaa00">  case ANIM_&lt;NAME&gt;: animFrameDelay=...; animLoop=...; break;</code><br><br>
+      <strong style="color:var(--c)">Step 3</strong> — In <code>animTick()</code>, add your case block.<br>
+      The generated code includes a ready-to-paste block.<br><br>
+      <strong style="color:var(--c)">Step 4</strong> — To trigger from web, add a button to the<br>
+      <code style="color:#ffaa00">trig-grid</code> div in WebDashboard.h with the new ID.<br><br>
+      <strong style="color:var(--c)">Step 5</strong> — Add to idle pool in <code>stateMachineTick()</code><br>
+      if you want it to appear randomly.
+    </div>
+  </div>
+
+</div><!-- /right col -->
+</div><!-- /main-layout -->
+</div><!-- /wrap -->
+
+<script>
+// ── Pixel grid state ──────────────────────────────────────────
+const COLS=128, ROWS=64;
+const SCALE=4; // canvas pixels per OLED pixel
+let frames=[]; // array of Uint8Array(128*64)
+let currentFrame=0;
+let isDrawing=false;
+let tool='draw';
+let clipboard=null;
+let isPlaying=false;
+let playInterval=null;
+const canvas=document.getElementById('pixelCanvas');
+const ctx=canvas.getContext('2d');
+ctx.imageSmoothingEnabled=false;
+
+function px(x,y){return y*COLS+x}
+
+function newFrame(){return new Uint8Array(COLS*ROWS)}
+
+function initFrames(){
+  frames=[newFrame()];
+  currentFrame=0;
+  renderAll();
+}
+
+function renderFrame(frame,targetCtx,targetCanvas,scale){
+  const s=scale||SCALE;
+  targetCtx=targetCtx||ctx;
+  targetCtx.fillStyle='#000';
+  targetCtx.fillRect(0,0,(targetCanvas||canvas).width,(targetCanvas||canvas).height);
+  targetCtx.fillStyle='#fff';
+  const fd=frames[frame]||frames[0];
+  for(let y=0;y<ROWS;y++){
+    for(let x=0;x<COLS;x++){
+      if(fd[px(x,y)]){
+        targetCtx.fillRect(x*s,y*s,s,s);
+      }
+    }
+  }
+  // Grid overlay (subtle)
+  if(s>=4){
+    targetCtx.strokeStyle='rgba(0,255,231,0.06)';
+    targetCtx.lineWidth=0.5;
+    for(let x=0;x<=COLS;x+=8){ targetCtx.beginPath();targetCtx.moveTo(x*s,0);targetCtx.lineTo(x*s,ROWS*s);targetCtx.stroke(); }
+    for(let y=0;y<=ROWS;y+=8){ targetCtx.beginPath();targetCtx.moveTo(0,y*s);targetCtx.lineTo(COLS*s,y*s);targetCtx.stroke(); }
+  }
+}
+
+function renderAll(){
+  renderFrame(currentFrame);
+  renderStrip();
+}
+
+function renderStrip(){
+  const strip=document.getElementById('frameStrip');
+  strip.innerHTML='';
+  frames.forEach((fd,i)=>{
+    const cv=document.createElement('canvas');
+    cv.width=COLS; cv.height=ROWS;
+    cv.style.width='60px'; cv.style.height='30px';
+    const c=cv.getContext('2d'); c.imageSmoothingEnabled=false;
+    c.fillStyle='#000'; c.fillRect(0,0,COLS,ROWS);
+    c.fillStyle='#fff';
+    for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++) if(fd[px(x,y)]) c.fillRect(x,y,1,1);
+    const wrap=document.createElement('div');
+    wrap.className='frame-thumb'+(i===currentFrame?' active':'');
+    wrap.appendChild(cv);
+    const num=document.createElement('div');num.className='frame-num';num.textContent=i+1;
+    wrap.appendChild(num);
+    if(frames.length>1){
+      const del=document.createElement('div');del.className='frame-delete';del.textContent='✕';
+      del.onclick=(e)=>{e.stopPropagation();deleteFrame(i);};
+      wrap.appendChild(del);
+    }
+    wrap.onclick=()=>{currentFrame=i;renderAll();};
+    strip.appendChild(wrap);
+  });
+}
+
+function getCanvasXY(e){
+  const rect=canvas.getBoundingClientRect();
+  const x=Math.floor((e.clientX-rect.left)/rect.width*COLS);
+  const y=Math.floor((e.clientY-rect.top)/rect.height*ROWS);
+  return {x:Math.max(0,Math.min(COLS-1,x)),y:Math.max(0,Math.min(ROWS-1,y))};
+}
+
+canvas.addEventListener('mousedown',e=>{
+  isDrawing=true;
+  const {x,y}=getCanvasXY(e);
+  frames[currentFrame][px(x,y)]=tool==='draw'?1:0;
+  renderAll();
+});
+canvas.addEventListener('mousemove',e=>{
+  if(!isDrawing)return;
+  const {x,y}=getCanvasXY(e);
+  frames[currentFrame][px(x,y)]=tool==='draw'?1:0;
+  renderFrame(currentFrame);
+});
+canvas.addEventListener('mouseup',()=>{isDrawing=false;renderStrip();});
+canvas.addEventListener('mouseleave',()=>{isDrawing=false;});
+
+// Touch support
+canvas.addEventListener('touchstart',e=>{e.preventDefault();isDrawing=true;const t=e.touches[0];const {x,y}=getCanvasXY(t);frames[currentFrame][px(x,y)]=tool==='draw'?1:0;renderAll();});
+canvas.addEventListener('touchmove',e=>{e.preventDefault();if(!isDrawing)return;const t=e.touches[0];const {x,y}=getCanvasXY(t);frames[currentFrame][px(x,y)]=tool==='draw'?1:0;renderFrame(currentFrame);});
+canvas.addEventListener('touchend',()=>{isDrawing=false;renderStrip();});
+
+function setTool(t){
+  tool=t;
+  document.getElementById('toolDraw').style.background=t==='draw'?'rgba(0,255,231,0.15)':'';
+  document.getElementById('toolDraw').style.borderColor=t==='draw'?'var(--c)':'rgba(0,255,231,0.3)';
+  document.getElementById('toolErase').style.background=t==='erase'?'rgba(255,45,120,0.15)':'';
+}
+function clearFrame(){frames[currentFrame]=newFrame();renderAll();}
+function fillAll(){frames[currentFrame].fill(1);renderAll();}
+function invertFrame(){frames[currentFrame]=frames[currentFrame].map(v=>v?0:1);renderAll();}
+function copyFrame(){clipboard=new Uint8Array(frames[currentFrame]);}
+function pasteFrame(){if(clipboard){frames[currentFrame]=new Uint8Array(clipboard);renderAll();}}
+function shiftFrame(dx,dy){
+  const src=frames[currentFrame];const dst=newFrame();
+  for(let y=0;y<ROWS;y++) for(let x=0;x<COLS;x++){
+    const nx=((x+dx)%COLS+COLS)%COLS, ny=((y+dy)%ROWS+ROWS)%ROWS;
+    dst[px(nx,ny)]=src[px(x,y)];
+  }
+  frames[currentFrame]=dst;renderAll();
+}
+function addFrame(){frames.push(newFrame());currentFrame=frames.length-1;renderAll();}
+function duplicateFrame(){const c=new Uint8Array(frames[currentFrame]);frames.splice(currentFrame+1,0,c);currentFrame++;renderAll();}
+function deleteFrame(i){if(frames.length<=1)return;frames.splice(i,1);if(currentFrame>=frames.length)currentFrame=frames.length-1;renderAll();}
+
+function togglePlay(){
+  isPlaying=!isPlaying;
+  document.getElementById('playBtn').textContent=isPlaying?'■ STOP':'▶ PLAY';
+  if(isPlaying){
+    const fps=parseInt(document.getElementById('fpsInput').value)||8;
+    playInterval=setInterval(()=>{currentFrame=(currentFrame+1)%frames.length;renderFrame(currentFrame);},1000/fps);
+  } else {
+    clearInterval(playInterval);renderAll();
+  }
+}
+
+// ── Presets ───────────────────────────────────────────────────
+function preset(name){
+  const fd=newFrame();
+  const draw=(x,y,w,h,fill)=>{for(let dy=0;dy<h;dy++)for(let dx=0;dx<w;dx++)if(x+dx>=0&&x+dx<COLS&&y+dy>=0&&y+dy<ROWS)fd[px(x+dx,y+dy)]=fill?1:0;};
+  const eye=(cx,cy,ew,eh)=>{for(let y=cy-eh/2;y<=cy+eh/2;y++)for(let x=cx-ew/2;x<=cx+ew/2;x++){const nx=Math.round(x),ny=Math.round(y);if(nx>=0&&nx<COLS&&ny>=0&&ny<ROWS)fd[px(nx,ny)]=1;}};
+  const pupil=(cx,cy)=>{for(let dy=-4;dy<=4;dy++)for(let dx=-4;dx<=4;dx++)if(dx*dx+dy*dy<=16)fd[px(cx+dx,cy+dy)]=0;};
+
+  switch(name){
+    case 'idle':
+      eye(36,28,26,20);pupil(36,28);eye(92,28,26,20);pupil(92,28);break;
+    case 'happy':
+      eye(36,28,26,20);pupil(36,26);eye(92,28,26,20);pupil(92,26);
+      // smile
+      for(let x=-12;x<=12;x++){const y=(int)(5*Math.sin((x+12)/24*Math.PI));const nx=64+x,ny=48-y;if(nx>=0&&nx<COLS&&ny>=0&&ny<ROWS)fd[px(nx,ny)]=1;}
+      break;
+    case 'scared':
+      eye(36,28,30,26);pupil(36,28);eye(92,28,30,26);pupil(92,28);
+      // eyebrows up
+      for(let x=22;x<=48;x++)fd[px(x,12)]=1;
+      for(let x=78;x<=104;x++)fd[px(x,12)]=1;
+      break;
+    case 'sleepy':
+      // Half-lid eyes
+      eye(36,30,26,14);pupil(36,32);eye(92,30,26,14);pupil(92,32);
+      // lids
+      draw(23,18,26,8,true);draw(79,18,26,8,true);
+      // zzz
+      for(let i=0;i<3;i++)fd[px(98+i*5,8+i*3)]=1;
+      break;
+    case 'squint':
+      eye(36,28,26,8);eye(92,28,26,8);break;
+    case 'heart':
+      // Left heart
+      eye(36,28,26,20);
+      for(let y=-5;y<=5;y++)for(let x=-6;x<=6;x++){
+        const hl=(x<0)?((x+3)**2+(y+2)**2<=9):((x-3)**2+(y+2)**2<=9);
+        const hr=(y>=-2&&Math.abs(x)<=6-y-2);
+        if(hl||hr)fd[px(36+x,28+y)]=1;
+      }
+      eye(92,28,26,20);
+      for(let y=-5;y<=5;y++)for(let x=-6;x<=6;x++){
+        const hl=(x<0)?((x+3)**2+(y+2)**2<=9):((x-3)**2+(y+2)**2<=9);
+        if(hl)fd[px(92+x,28+y)]=1;
+      }
+      break;
+  }
+  frames[currentFrame]=fd;renderAll();
+}
+function int(v){return Math.round(v);}
+
+// ── Buzzer note builder ───────────────────────────────────────
+let notes=[];
+function addNote(freq){
+  notes.push({freq:freq===undefined?440:0,dur:100});
+  renderNotes();
+}
+function clearNotes(){notes=[];renderNotes();}
+function renderNotes(){
+  const list=document.getElementById('noteList');
+  list.innerHTML='';
+  notes.forEach((n,i)=>{
+    const row=document.createElement('div');row.className='note-row';
+    row.innerHTML=`
+      <div>
+        <div style="font-size:.6rem;color:rgba(0,255,231,0.4);margin-bottom:3px">FREQ Hz</div>
+        <input type="number" value="${n.freq}" min="0" max="8000" style="width:90px" onchange="notes[${i}].freq=parseInt(this.value)">
+      </div>
+      <div>
+        <div style="font-size:.6rem;color:rgba(0,255,231,0.4);margin-bottom:3px">DUR ms</div>
+        <input type="number" value="${n.dur}" min="10" max="2000" style="width:80px" onchange="notes[${i}].dur=parseInt(this.value)">
+      </div>
+      <div style="font-size:.7rem;color:rgba(0,255,231,0.5);padding-top:18px">${n.freq===0?'REST':noteToName(n.freq)}</div>
+      <div class="note-remove" onclick="notes.splice(${i},1);renderNotes()">✕</div>
+    `;
+    list.appendChild(row);
+  });
+}
+const noteNames=['C','C#','D','D#','E','F','F#','G','G#','A','A#','B'];
+function noteToName(freq){if(freq===0)return'REST';const n=Math.round(12*Math.log2(freq/440)+69);return noteNames[n%12]+(Math.floor(n/12)-1);}
+
+function previewMelody(){
+  if(!notes.length)return;
+  const ctx2=new(window.AudioContext||window.webkitAudioContext)();
+  let t=ctx2.currentTime;
+  notes.forEach(n=>{
+    if(n.freq>0){
+      const osc=ctx2.createOscillator();const g=ctx2.createGain();
+      osc.connect(g);g.connect(ctx2.destination);
+      osc.frequency.value=n.freq;g.gain.value=0.3;
+      osc.start(t);osc.stop(t+n.dur/1000);
+    }
+    t+=n.dur/1000;
+  });
+}
+
+// ── Code generator ────────────────────────────────────────────
+function generateCode(){
+  const name=document.getElementById('animName').value.toUpperCase().replace(/[^A-Z0-9_]/g,'_');
+  const delay=parseInt(document.getElementById('frameDelay').value)||120;
+  const loop=document.getElementById('animLoop').value;
+  const autoRet=parseInt(document.getElementById('autoReturn').value)||0;
+  const melodyId=parseInt(document.getElementById('melodyId').value);
+
+  let code='';
+  code+='// ════════════════════════════════════════\n';
+  code+=`// EMOTION: ANIM_${name}\n`;
+  code+='// Generated by Chordy Emotion Builder\n';
+  code+='// ════════════════════════════════════════\n\n';
+
+  // 1. Config.h addition
+  code+='// ── 1. Add to AnimID enum in Config.h ───\n';
+  code+=`//   ANIM_${name},   // before ANIM_COUNT\n\n`;
+
+  // 2. animPlay() case
+  code+='// ── 2. Add in animPlay() switch ─────────\n';
+  code+=`case ANIM_${name}:\n`;
+  code+=`  animFrameDelay = speedToDelay(${delay});\n`;
+  code+=`  animLoop = ${loop};\n`;
+  code+=`  break;\n\n`;
+
+  // 3. animTick() case — generate bitmap data
+  code+='// ── 3. Add in animTick() switch ─────────\n';
+  code+=`case ANIM_${name}: {\n`;
+
+  // Frame bitmaps as PROGMEM arrays
+  frames.forEach((fd,fi)=>{
+    // Compress to Adafruit-style drawBitmap format
+    const bytes=[];
+    for(let y=0;y<ROWS;y+=8){
+      for(let x=0;x<COLS;x++){
+        let b=0;
+        for(let bit=0;bit<8;bit++){
+          if(y+bit<ROWS&&fd[px(x,y+bit)])b|=(1<<bit);
+        }
+        bytes.push(b);
+      }
+    }
+    code+=`  // Frame ${fi+1}\n`;
+    code+=`  static const uint8_t PROGMEM frame${name}_${fi}[] = {\n    `;
+    bytes.forEach((b,i)=>{code+=`0x${b.toString(16).padStart(2,'0')}`;if(i<bytes.length-1)code+=i%16===15?',\n    ':',' ;});
+    code+='\n  };\n';
+  });
+
+  code+=`\n  // Render current frame\n`;
+  code+=`  display.clearDisplay();\n`;
+
+  if(frames.length===1){
+    code+=`  display.drawBitmap(0, 0, frame${name}_0, 128, 64, SSD1306_WHITE);\n`;
+  } else {
+    // Create array of frame pointers
+    code+=`  const uint8_t* fPtrs[] = {`;
+    frames.forEach((_,fi)=>code+=`frame${name}_${fi}${fi<frames.length-1?', ':''}`);
+    code+=`};\n`;
+    code+=`  int fIdx = animFrame % ${frames.length};\n`;
+    code+=`  display.drawBitmap(0, 0, fPtrs[fIdx], 128, 64, SSD1306_WHITE);\n`;
+  }
+
+  if(autoRet>0){
+    code+=`\n  animFrame++;\n`;
+    code+=`  if (animFrame > ${autoRet}) animPlay(ANIM_IDLE);\n`;
+  } else {
+    code+=`\n  animFrame++;\n`;
+    code+=`  if (!${loop}) { if (animFrame > ${Math.max(1,frames.length)-1}) { animPlay(ANIM_IDLE); return; } }\n`;
+  }
+
+  code+=`  drawTimerBorder();\n`;
+  code+=`  display.display();\n`;
+  code+=`  break;\n}\n\n`;
+
+  // 4. Melody
+  if(notes.length>0){
+    code+='// ── 4. Custom melody (add to buzzerMelody()) ─\n';
+    code+=`// Melody for ANIM_${name} — use next available ID\n`;
+    code+=`const Note melody_${name.toLowerCase()}[] = {\n`;
+    notes.forEach(n=>{code+=`  {${n.freq}, ${n.dur}},  // ${n.freq===0?'REST':noteToName(n.freq)}\n`;});
+    code+=`};\n`;
+    code+=`// In buzzerMelody() add:\n`;
+    code+=`// case <YOUR_ID>: notes=melody_${name.toLowerCase()}; len=${notes.length}; break;\n\n`;
+  }
+
+  // 5. Dev panel button
+  code+='// ── 5. Add to WebDashboard.h dev panel ──\n';
+  const animIdNum='ANIM_COUNT'; // placeholder
+  code+=`// <button class="btn" onclick="trig(<YOUR_ID>)">✨ ${name}</button>\n\n`;
+
+  // 6. Idle pool
+  code+='// ── 6. Optionally add to idle pool in stateMachineTick() ─\n';
+  code+=`// AnimID idlePool[] = { ..., ANIM_${name}, ... };\n`;
+
+  document.getElementById('codeOutput').textContent=code;
+}
+
+function copyCode(){
+  navigator.clipboard.writeText(document.getElementById('codeOutput').textContent);
+  alert('✓ Code copied to clipboard!');
+}
+
+// ── Init ──────────────────────────────────────────────────────
+initFrames();
+setTool('draw');
+</script>
+</body>
+</html>
