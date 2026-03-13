@@ -550,7 +550,7 @@ void animTick() {
 
     // ── SQUINT ────────────────────────────────────────────────
     case ANIM_SQUINT: {
-      int squintSeq[] = {EYE_H, EYE_H*2/3, EYE_H/3, EYE_H/6, EYE_H/3, EYE_H*2/3, EYE_H};
+      int squintSeq[] = {EYE_H, EYE_H*2/3, EYE_H/3, EYE_H/6,EYE_H/6,EYE_H/6,EYE_H/6,EYE_H/6,EYE_H/6,EYE_H/6,EYE_H/6,EYE_H/6,EYE_H/6,EYE_H/6,EYE_H/6,EYE_H/6, EYE_H/3, EYE_H*2/3, EYE_H};
       int n = sizeof(squintSeq)/sizeof(squintSeq[0]);
       if (animFrame < n) {
         blinkH = max(2, squintSeq[animFrame]);

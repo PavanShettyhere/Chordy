@@ -36,7 +36,9 @@ bool          isAsleep      = false;
 DisplayScreen currentScreen = SCREEN_FACE;
 
 // ── Timers ───────────────────────────────────────────────────
+unsigned long configuredTimerMs   = 25UL * 60UL * 1000UL; // default 25 min
 unsigned long lastSensorReadMs    = 0;
+unsigned long lastScreenRenderMs  = 0;
 unsigned long lastWeatherFetchMs  = 0;
 unsigned long lastLDRSampleMs     = 0;
 unsigned long lastIdleChangeMs    = 0;
@@ -46,6 +48,7 @@ unsigned long ldrReactionEndMs    = 0;
 bool          timerActive         = false;
 bool          inLdrReaction       = false;
 int           ldrPrev             = 0;
+
 
 // ── Button state (FIXED: proper edge detection) ──────────────
 struct BtnState {
@@ -214,12 +217,18 @@ void handleButtons() {
           currentScreen = SCREEN_FACE;
           if (timerActive) {
             timerActive = false;
+            timerTotalMs = 0;
+            timerEndMs = 0;
+            currentState = STATE_IDLE;
+            animPlay(ANIM_IDLE);
             if (config.buzzerEnabled) buzzerTone(400, 200);
           } else {
-            timerTotalMs = 25UL * 60UL * 1000UL;
+            if (configuredTimerMs == 0) configuredTimerMs = 25UL * 60UL * 1000UL;
+            timerTotalMs = configuredTimerMs;
             timerEndMs   = millis() + timerTotalMs;
             timerActive  = true;
             currentState = STATE_TIMER_RUNNING;
+            animPlay(ANIM_THINKING);
             if (config.buzzerEnabled) buzzerMelody(2);
           }
         }
@@ -346,16 +355,16 @@ void stateMachineTick() {
 
     if (!inLdrReaction) {
       if (delta > LDR_SUDDEN_CHANGE_DELTA) {
-        currentState = STATE_BLINKING_BRIGHT;
-        animPlay(ANIM_SQUINT);
-        if (config.buzzerEnabled) buzzerTone(600, 80);
+        currentState = STATE_SCARED;
+        animPlay(ANIM_SCARED);
+        if (config.buzzerEnabled) buzzerMelody(5);
         inLdrReaction = true;
         ldrReactionEndMs = now + LDR_REACTION_DURATION_MS;
         lastIdleChangeMs = now;
       } else if (delta < -LDR_SUDDEN_CHANGE_DELTA) {
-        currentState = STATE_SCARED;
-        animPlay(ANIM_SCARED);
-        if (config.buzzerEnabled) buzzerMelody(5);
+        currentState =  STATE_BLINKING_BRIGHT;
+        animPlay(ANIM_SQUINT);
+        if (config.buzzerEnabled) buzzerTone(600, 80);
         inLdrReaction = true;
         ldrReactionEndMs = now + LDR_REACTION_DURATION_MS;
         lastIdleChangeMs = now;
@@ -428,6 +437,11 @@ void stateMachineTick() {
   }
 }
 
+void setupTimezone(const char* tz) {
+  setenv("TZ", tz, 1);
+  tzset();
+}
+
 // ── setup() ──────────────────────────────────────────────────
 void setup() {
   Serial.begin(115200);
@@ -449,7 +463,7 @@ void setup() {
 
   animInit();
   animPlay(ANIM_STARTUP);
-  delay(1500);
+  delay(1000);
 
   sensorsInit();
   loadConfig();
@@ -481,6 +495,7 @@ void setup() {
       Serial.printf("[Chordy] WiFi OK: %s\n", WiFi.localIP().toString().c_str());
       // NTP sync
       configTime(0, 0, "pool.ntp.org", "time.nist.gov");
+      setupTimezone("CET-1CEST,M3.5.0/2,M10.5.0/3");
       webServerInit(false);
       fetchWeather();
       currentState = STATE_IDLE;
@@ -523,13 +538,36 @@ void loop() {
   stateMachineTick();
 
   // Screen dispatch
-  switch (currentScreen) {
-    case SCREEN_FACE:    animTick(); break;
-    case SCREEN_CLOCK:   renderClockScreen(); delay(400); break;
-    case SCREEN_WEATHER: renderWeatherScreen(); delay(600); break;
-    case SCREEN_SENSORS: renderSensorsScreen(); delay(500); break;
-    default: animTick(); break;
-  }
+    switch (currentScreen) {
+      case SCREEN_FACE:
+        animTick();
+        break;
+
+      case SCREEN_CLOCK:
+        if (now - lastScreenRenderMs >= 250) {
+          renderClockScreen();
+          lastScreenRenderMs = now;
+        }
+        break;
+
+      case SCREEN_WEATHER:
+        if (now - lastScreenRenderMs >= 400) {
+          renderWeatherScreen();
+          lastScreenRenderMs = now;
+        }
+        break;
+
+      case SCREEN_SENSORS:
+        if (now - lastScreenRenderMs >= 250) {
+          renderSensorsScreen();
+          lastScreenRenderMs = now;
+        }
+        break;
+
+      default:
+        animTick();
+        break;
+    }
 }
 
 // ── fetchWeather() ────────────────────────────────────────────
