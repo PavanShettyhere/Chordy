@@ -399,21 +399,6 @@ const char DASHBOARD_HTML[] PROGMEM = R"HTMLEOF(
     </div>
   </div>
 
-
-  <!-- Web Buttons -->
-  <div class="card col-6">
-    <div class="card-title">Remote Buttons</div>
-    <p style="font-size:.75rem;color:rgba(0,255,231,0.6);margin-bottom:16px;letter-spacing:1px">
-      SIMULATE THE FOUR PHYSICAL BUTTONS FROM THE WEB APP
-    </p>
-    <div class="trigger-grid">
-      <button class="btn" onclick="pressButton(0)">⏻ Sleep / Wake</button>
-      <button class="btn" onclick="pressButton(1)">🛰 Select</button>
-      <button class="btn btn-purple" onclick="pressButton(2)">🤚 Interact</button>
-      <button class="btn btn-pink" onclick="pressButton(3)">⏱ Timer Button</button>
-    </div>
-  </div>
-
   <!-- Settings -->
   <div class="card col-6">
     <div class="card-title">Configuration</div>
@@ -422,7 +407,7 @@ const char DASHBOARD_HTML[] PROGMEM = R"HTMLEOF(
     <div class="field-label">LOCATION</div>
     <input type="text" id="cfgLocation" placeholder="London">
     <div class="field-label">WEATHER SOURCE</div>
-    <input type="text" value="Open-Meteo (no API key needed)" disabled>
+    <input type="text" id="cfgOwmKey" value="Open-Meteo (no API key needed)" disabled>
     <button class="btn btn-primary" onclick="saveSettings()" style="width:100%;margin-top:4px">
       ⬆ SAVE CONFIG
     </button>
@@ -485,14 +470,8 @@ const STATE_NAMES = ["BOOT","WIFI_SETUP","CONNECTING","IDLE","HAPPY","VERY_HAPPY
   "SCARED","SLEEPY","BRIGHT","COLD","HOT","RAINY","INTERACTING","TIMER","SLEEPING"];
 
 const WEATHER_ICONS = {
-  "0": "☀️",
-  "1": "🌤️", "2": "⛅", "3": "☁️",
-  "45": "🌫️", "48": "🌫️",
-  "51": "🌦️", "53": "🌦️", "55": "🌦️",
-  "61": "🌧️", "63": "🌧️", "65": "🌧️",
-  "71": "❄️", "73": "❄️", "75": "❄️",
-  "80": "🌧️", "81": "🌧️", "82": "🌧️",
-  "95": "⛈️", "96": "⛈️", "99": "⛈️"
+  "2": "⛈️", "3": "🌦️", "5": "🌧️", "6": "❄️", "7": "🌫️",
+  "800": "☀️", "80": "⛅", "": "🌤️"
 };
 
 let eyeR = 0, eyeG = 255, eyeB = 200;
@@ -576,7 +555,8 @@ async function pollTelemetry() {
       document.getElementById('weatherDesc').textContent = d.weather_desc;
       document.getElementById('windSpeed').textContent = d.weather_wind.toFixed(1);
       document.getElementById('weatherCode').textContent = d.weather_code || '--';
-      const icon = WEATHER_ICONS[String(d.weather_code)] || '🌤️';
+      const prefix = String(Math.floor((d.weather_code || 800) / 100));
+      const icon = WEATHER_ICONS[String(d.weather_code)] || WEATHER_ICONS[prefix] || '🌤️';
       document.getElementById('weatherIcon').textContent = icon;
     }
 
@@ -643,16 +623,6 @@ async function saveSettings() {
     body: JSON.stringify(payload)
   });
   toast('Settings saved!');
-}
-
-
-async function pressButton(id) {
-  const names = ['Sleep / Wake', 'Select', 'Interact', 'Timer Button'];
-  await fetch('/api/button', {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({button: id})
-  });
-  toast('Pressed: ' + (names[id] || id));
 }
 
 // ── Trigger animation ─────────────────────────────────────────

@@ -13,12 +13,10 @@ extern RobotState  currentState;
 extern AnimID      forcedAnim;
 extern bool        timerActive;
 extern unsigned long timerEndMs;
-void pressButton(uint8_t buttonIndex);
 
 static bool _apMode = false;
 
 // ── Forward decls ─────────────────────────────────────────────
-void handleDashboard();
 void handleRoot();
 void handleSetup();
 void handleSave();
@@ -27,30 +25,8 @@ void handleSettings();
 void handleSaveSettings();
 void handleTrigger();
 void handleSetTimer();
-void handleButtonPress();
-
-void handleButtonPress() {
-  if (!webServer.hasArg("plain")) {
-    webServer.send(400, "application/json", "{\"ok\":false}");
-    return;
-  }
-
-  StaticJsonDocument<96> doc;
-  if (deserializeJson(doc, webServer.arg("plain"))) {
-    webServer.send(400, "application/json", "{\"ok\":false}");
-    return;
-  }
-
-  int buttonId = doc["button"] | -1;
-  if (buttonId < 0 || buttonId > 3) {
-    webServer.send(400, "application/json", "{\"ok\":false}");
-    return;
-  }
-
-  pressButton((uint8_t)buttonId);
-  webServer.send(200, "application/json", "{\"ok\":true}");
-}
 void handleNotFound();
+void handleDashboard();
 
 // ──────────────────────────────────────────────────────────────
 void webServerInit(bool apMode) {
@@ -76,7 +52,6 @@ void webServerInit(bool apMode) {
   webServer.on("/api/settings",      HTTP_POST, handleSaveSettings);
   webServer.on("/api/trigger",       HTTP_POST, handleTrigger);
   webServer.on("/api/timer",         HTTP_POST, handleSetTimer);
-  webServer.on("/api/button",        HTTP_POST, handleButtonPress);
   webServer.onNotFound(handleNotFound);
   webServer.begin();
   Serial.println("[Web] HTTP server started");
@@ -140,8 +115,7 @@ void handleSave() {
     strlcpy(config.wifiPass, webServer.arg("pass").c_str(), 64);
     strlcpy(config.botName,  webServer.arg("name").c_str(), 32);
     strlcpy(config.location, webServer.arg("location").c_str(), 64);
-    strlcpy(config.owmApiKey,webServer.arg("owmkey").c_str(), 48);
-    config.setupDone = true;
+        config.setupDone = true;
     saveConfig();
     webServer.send(200, "text/html",
       "<html><body style='background:#030912;color:#00ffe7;font-family:monospace;"
@@ -194,7 +168,6 @@ void handleSaveSettings() {
     if (!deserializeJson(doc, webServer.arg("plain"))) {
       if (doc.containsKey("botName"))  strlcpy(config.botName,  doc["botName"],  32);
       if (doc.containsKey("location")) strlcpy(config.location, doc["location"], 64);
-      if (doc.containsKey("owmKey"))   strlcpy(config.owmApiKey,doc["owmKey"],   48);
       if (doc.containsKey("eyeR"))  config.eyeR = doc["eyeR"];
       if (doc.containsKey("eyeG"))  config.eyeG = doc["eyeG"];
       if (doc.containsKey("eyeB"))  config.eyeB = doc["eyeB"];
@@ -248,5 +221,7 @@ void handleNotFound() {
 // Full Sci-Fi / Cyberpunk Dashboard
 // ──────────────────────────────────────────────────────────────
 void handleDashboard() {
+  // Served as a single large HTML string
+  // The full page is defined in WebDashboard.h to keep this file manageable
   webServer.send_P(200, "text/html", DASHBOARD_HTML);
 }

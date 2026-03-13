@@ -17,6 +17,7 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>        // Install: "ArduinoJson" by Benoit Blanchon
 #include <DNSServer.h>
+#include <WiFiClientSecure.h>
 
 // ── Global objects ───────────────────────────────────────────
 Adafruit_SSD1306 display(OLED_WIDTH, OLED_HEIGHT, &Wire, -1);
@@ -72,10 +73,6 @@ void sensorsInit();
 void sensorsRead();
 void ldrSample();
 void pirCheck();
-
-// Shared actions
-void pressButton(uint8_t buttonIndex);
-void fetchWeather();
 
 // ── Load config from Preferences ─────────────────────────────
 void loadConfig() {
@@ -139,69 +136,60 @@ static bool isRainyWeatherCode(int code) {
   }
 }
 
-void pressButton(uint8_t i) {
-  switch (i) {
-    case 0: // BTN_POWER — toggle sleep
-      isAsleep = !isAsleep;
-      if (isAsleep) {
-        currentState = STATE_SLEEPING;
-        animPlay(ANIM_SLEEPY);
-        buzzerMelody(3);
-      } else {
-        currentState = STATE_IDLE;
-        animPlay(ANIM_IDLE);
-        buzzerMelody(0);
-      }
-      break;
-
-    case 1: // BTN_SELECT — quick acknowledgement / weather peek
-      if (!isAsleep) {
-        animPlay(ANIM_BLINK);
-        buzzerTone(1200, 80);
-      }
-      break;
-
-    case 2: // BTN_INTERACT — pet Chordy
-      if (!isAsleep) {
-        currentState = STATE_VERY_HAPPY;
-        animPlay(ANIM_HEART_EYES);
-        buzzerMelody(1);
-        lastIdleChangeMs = millis();
-      }
-      break;
-
-    case 3: // BTN_EXTRA — set/cancel 25-min timer
-      if (!isAsleep) {
-        if (timerActive) {
-          timerActive = false;
-          buzzerTone(400, 200);
-        } else {
-          timerEndMs  = millis() + 25UL * 60UL * 1000UL;
-          timerActive = true;
-          currentState = STATE_TIMER_RUNNING;
-          buzzerMelody(2);
-        }
-      }
-      break;
-  }
-}
-
 // ── Button polling ────────────────────────────────────────────
 void handleButtons() {
   unsigned long now = millis();
   for (int i = 0; i < 4; i++) {
     bool reading = digitalRead(btns[i].pin);
-
     if (reading != btns[i].last) {
       btns[i].lastMs = now;
     }
-
     if ((now - btns[i].lastMs) > BTN_DEBOUNCE_MS) {
       if (reading == LOW && btns[i].last == HIGH) {
-        pressButton(i);
+        // Button pressed
+        switch (i) {
+          case 0: // BTN_POWER — toggle sleep
+            isAsleep = !isAsleep;
+            if (isAsleep) {
+              currentState = STATE_SLEEPING;
+              animPlay(ANIM_SLEEPY);
+              buzzerMelody(3);
+            } else {
+              currentState = STATE_IDLE;
+              animPlay(ANIM_IDLE);
+              buzzerMelody(0);
+            }
+            break;
+          case 1: // BTN_SELECT — cycle through weather info on display
+            if (!isAsleep) {
+              animPlay(ANIM_BLINK);
+              buzzerTone(1200, 80);
+            }
+            break;
+          case 2: // BTN_INTERACT — pet Chordy
+            if (!isAsleep) {
+              currentState = STATE_VERY_HAPPY;
+              animPlay(ANIM_HEART_EYES);
+              buzzerMelody(1);
+              lastIdleChangeMs = millis();
+            }
+            break;
+          case 3: // BTN_EXTRA — set/cancel 25-min timer
+            if (!isAsleep) {
+              if (timerActive) {
+                timerActive = false;
+                buzzerTone(400, 200);
+              } else {
+                timerEndMs  = millis() + 25UL * 60UL * 1000UL;
+                timerActive = true;
+                currentState = STATE_TIMER_RUNNING;
+                buzzerMelody(2);
+              }
+            }
+            break;
+        }
       }
     }
-
     btns[i].last = reading;
   }
 }
@@ -356,6 +344,7 @@ void setup() {
       currentState = STATE_WIFI_SETUP;
     }
   }
+  fetchWeather();
 
   ldrPrev = analogRead(LDR_PIN);
   Serial.println("[Chordy] Ready!");
@@ -396,13 +385,20 @@ void loop() {
 void fetchWeather() {
   if (strlen(config.location) == 0) return;
 
+  WiFiClientSecure client;
+  client.setInsecure();
   HTTPClient http;
   StaticJsonDocument<2048> doc;
 
   String geocodeUrl = String("https://") + WEATHER_GEOCODE_HOST + WEATHER_GEOCODE_PATH +
                       "?name=" + urlEncode(config.location) + "&count=1&language=en&format=json";
 
-  http.begin(geocodeUrl);
+  Serial.println("[Chordy] Geocode GET: " + geocodeUrl);
+  if (!http.begin(client, geocodeUrl)) {
+    Serial.println("[Chordy] Geocoding begin failed");
+    return;
+  }
+
   int code = http.GET();
   if (code != 200) {
     Serial.printf("[Chordy] Geocoding failed: HTTP %d\n", code);
@@ -424,16 +420,21 @@ void fetchWeather() {
     return;
   }
 
-  const float latitude  = results[0]["latitude"]  | 0.0f;
+  const float latitude  = results[0]["latitude"] | 0.0f;
   const float longitude = results[0]["longitude"] | 0.0f;
 
   doc.clear();
-  char forecastUrl[320];
-  snprintf(forecastUrl, sizeof(forecastUrl),
-           "https://%s%s?latitude=%.4f&longitude=%.4f&current=temperature_2m,wind_speed_10m,weather_code&wind_speed_unit=kmh&temperature_unit=celsius",
-           WEATHER_API_HOST, WEATHER_API_PATH, latitude, longitude);
+  String url = "https://api.open-meteo.com/v1/forecast?";
+  url += "latitude=" + String(latitude, 4);
+  url += "&longitude=" + String(longitude, 4);
+  url += "&current_weather=true";
 
-  http.begin(forecastUrl);
+  Serial.println("[Chordy] Forecast GET: " + url);
+  if (!http.begin(client, url)) {
+    Serial.println("[Chordy] Forecast begin failed");
+    return;
+  }
+
   code = http.GET();
   if (code != 200) {
     Serial.printf("[Chordy] Forecast failed: HTTP %d\n", code);
@@ -449,15 +450,15 @@ void fetchWeather() {
     return;
   }
 
-  JsonObject current = doc["current"];
+  JsonObject current = doc["current_weather"];
   if (current.isNull()) {
-    Serial.println("[Chordy] Forecast response missing current weather");
+    Serial.println("[Chordy] Forecast response missing current_weather");
     return;
   }
 
-  weatherData.tempC         = current["temperature_2m"] | 0.0f;
-  weatherData.windKph       = current["wind_speed_10m"] | 0.0f;
-  weatherData.conditionCode = current["weather_code"] | 0;
+  weatherData.tempC         = current["temperature"] | 0.0f;
+  weatherData.windKph       = current["windspeed"] | 0.0f;
+  weatherData.conditionCode = current["weathercode"] | 0;
   snprintf(weatherData.description, sizeof(weatherData.description),
            "WMO %d", weatherData.conditionCode);
   weatherData.valid = true;
