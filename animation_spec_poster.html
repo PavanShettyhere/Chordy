@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chordy — Animation Design Spec</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Share+Tech+Mono&family=Space+Grotesk:wght@300;400;600&display=swap');
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:#040a12;color:#00ffe7;font-family:'Share Tech Mono',monospace;overflow-x:hidden}
+
+  /* Full poster */
+  .poster{width:1000px;margin:0 auto;padding:60px 60px 80px}
+
+  /* Header */
+  .poster-header{text-align:center;margin-bottom:60px;position:relative}
+  .poster-header::before{
+    content:'';position:absolute;inset:-20px;
+    background:radial-gradient(ellipse at 50% 0%, rgba(0,255,231,0.08), transparent 70%);
+    pointer-events:none;
+  }
+  .brand{
+    font-family:'Orbitron',sans-serif;font-size:5rem;font-weight:900;
+    letter-spacing:20px;color:#00ffe7;
+    text-shadow:0 0 60px rgba(0,255,231,0.4),0 0 120px rgba(0,255,231,0.2);
+    position:relative;
+  }
+  .brand-sub{font-size:.9rem;letter-spacing:8px;color:rgba(0,255,231,0.5);margin-top:8px;text-transform:uppercase}
+  .divider{
+    width:200px;height:2px;margin:28px auto;
+    background:linear-gradient(90deg,transparent,#00ffe7,transparent);
+  }
+  .tagline{font-family:'Space Grotesk',sans-serif;font-size:1.1rem;font-weight:300;
+           color:rgba(0,255,231,0.7);letter-spacing:3px}
+
+  /* Grid */
+  .spec-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:24px;margin-bottom:48px}
+  .spec-grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:24px;margin-bottom:48px}
+
+  /* Anim card */
+  .anim-card{
+    background:rgba(6,21,37,0.8);border:1px solid rgba(0,255,231,0.15);
+    border-radius:16px;padding:20px 16px;position:relative;overflow:hidden;
+  }
+  .anim-card::before{
+    content:'';position:absolute;top:0;left:0;right:0;height:1px;
+    background:linear-gradient(90deg,transparent,var(--accent,#00ffe7),transparent);
+  }
+  .anim-id{
+    position:absolute;top:12px;right:12px;
+    font-family:'Orbitron',sans-serif;font-size:.55rem;font-weight:700;
+    color:rgba(0,255,231,0.3);letter-spacing:2px;
+  }
+
+  /* Mini OLED simulation */
+  .mini-oled{
+    width:100%;aspect-ratio:2/1;background:#000;border-radius:8px;
+    display:flex;align-items:center;justify-content:center;
+    margin-bottom:12px;position:relative;overflow:hidden;
+    border:1px solid rgba(0,255,231,0.1);
+  }
+  .mini-oled canvas{display:block}
+
+  .anim-name{
+    font-family:'Orbitron',sans-serif;font-size:.7rem;font-weight:700;
+    letter-spacing:2px;margin-bottom:6px;
+  }
+  .anim-trigger{font-size:.65rem;color:rgba(0,255,231,0.5);margin-bottom:4px}
+  .anim-desc{font-size:.65rem;color:rgba(0,255,231,0.65);line-height:1.5}
+
+  .badge{
+    display:inline-block;padding:2px 8px;border-radius:10px;font-size:.55rem;
+    font-family:'Orbitron',sans-serif;letter-spacing:1px;margin-top:6px;
+  }
+  .badge-auto{background:rgba(0,255,231,0.1);color:#00ffe7;border:1px solid rgba(0,255,231,0.3)}
+  .badge-sensor{background:rgba(255,170,0,0.1);color:#ffaa00;border:1px solid rgba(255,170,0,0.3)}
+  .badge-btn{background:rgba(255,45,120,0.1);color:#ff2d78;border:1px solid rgba(255,45,120,0.3)}
+  .badge-weather{background:rgba(123,47,255,0.1);color:#7b2fff;border:1px solid rgba(123,47,255,0.3)}
+  .badge-dev{background:rgba(0,255,136,0.1);color:#00ff88;border:1px solid rgba(0,255,136,0.3)}
+
+  /* State machine diagram */
+  .state-section{margin-bottom:48px}
+  .section-title{
+    font-family:'Orbitron',sans-serif;font-size:.8rem;font-weight:700;
+    letter-spacing:4px;color:rgba(0,255,231,0.6);
+    margin-bottom:20px;padding-bottom:10px;
+    border-bottom:1px solid rgba(0,255,231,0.15);
+    display:flex;align-items:center;gap:12px;
+  }
+  .section-title::before{content:'//';color:rgba(0,255,231,0.3)}
+
+  /* Feature table */
+  .feat-table{width:100%;border-collapse:collapse}
+  .feat-table th{
+    background:rgba(0,255,231,0.08);color:rgba(0,255,231,0.8);
+    font-family:'Orbitron',sans-serif;font-size:.65rem;letter-spacing:2px;
+    padding:10px 14px;text-align:left;border:1px solid rgba(0,255,231,0.12);
+  }
+  .feat-table td{
+    padding:9px 14px;border:1px solid rgba(0,255,231,0.08);
+    font-size:.72rem;color:rgba(0,255,231,0.75);vertical-align:top;
+  }
+  .feat-table tr:hover td{background:rgba(0,255,231,0.03)}
+
+  /* Footer */
+  .poster-footer{
+    margin-top:60px;padding-top:28px;
+    border-top:1px solid rgba(0,255,231,0.1);
+    display:flex;justify-content:space-between;align-items:center;
+  }
+  .footer-logo{font-family:'Orbitron',sans-serif;font-size:1.2rem;font-weight:900;
+               letter-spacing:6px;color:#00ffe7;opacity:.6}
+  .footer-meta{font-size:.65rem;color:rgba(0,255,231,0.35);letter-spacing:2px;text-align:right}
+</style>
+</head>
+<body>
+<div class="poster">
+
+  <!-- Header -->
+  <div class="poster-header">
+    <div class="brand">CHORDY</div>
+    <div class="brand-sub">Desk Companion Robot</div>
+    <div class="divider"></div>
+    <div class="tagline">Animation Design Specification · Eye System · State Machine</div>
+  </div>
+
+  <!-- Animation Cards -->
+  <div class="section-title">Animation Library — Eye Behavior Atlas</div>
+  <div class="spec-grid">
+
+    <!-- IDLE -->
+    <div class="anim-card" style="--accent:#00ffe7">
+      <div class="anim-id">ANIM_00</div>
+      <div class="mini-oled"><canvas id="c0" width="160" height="80"></canvas></div>
+      <div class="anim-name" style="color:#00ffe7">IDLE</div>
+      <div class="anim-trigger">Trigger: Default loop</div>
+      <div class="anim-desc">Normal eyes. Pupils drift slowly. Occasional blink every ~8s. Name shown below.</div>
+      <span class="badge badge-auto">AUTO</span>
+    </div>
+
+    <!-- BLINK -->
+    <div class="anim-card" style="--accent:#00ffe7">
+      <div class="anim-id">ANIM_01</div>
+      <div class="mini-oled"><canvas id="c1" width="160" height="80"></canvas></div>
+      <div class="anim-name" style="color:#00ffe7">BLINK</div>
+      <div class="anim-trigger">Trigger: Random / Select btn</div>
+      <div class="anim-desc">Eyes close and reopen with smooth eyelid animation. 9-frame sequence.</div>
+      <span class="badge badge-auto">AUTO</span>
+    </div>
+
+    <!-- HAPPY -->
+    <div class="anim-card" style="--accent:#00ff88">
+      <div class="anim-id">ANIM_02</div>
+      <div class="mini-oled"><canvas id="c2" width="160" height="80"></canvas></div>
+      <div class="anim-name" style="color:#00ff88">HAPPY</div>
+      <div class="anim-trigger">Trigger: WiFi connected</div>
+      <div class="anim-desc">Pupils bounce vertically. Arms/hands wave at sides. Smile arc drawn below eyes.</div>
+      <span class="badge badge-auto">AUTO</span>
+    </div>
+
+    <!-- VERY HAPPY -->
+    <div class="anim-card" style="--accent:#ff2d78">
+      <div class="anim-id">ANIM_03</div>
+      <div class="mini-oled"><canvas id="c3" width="160" height="80"></canvas></div>
+      <div class="anim-name" style="color:#ff2d78">VERY HAPPY</div>
+      <div class="anim-trigger">Trigger: 2h absence / pet btn</div>
+      <div class="anim-desc">Heart icons replace pupils. Whole face bounces. Hands waving at maximum amplitude.</div>
+      <span class="badge badge-btn">BUTTON</span>
+      <span class="badge badge-sensor">PIR</span>
+    </div>
+
+    <!-- SCARED -->
+    <div class="anim-card" style="--accent:#ffaa00">
+      <div class="anim-id">ANIM_04</div>
+      <div class="mini-oled"><canvas id="c4" width="160" height="80"></canvas></div>
+      <div class="anim-name" style="color:#ffaa00">SCARED</div>
+      <div class="anim-trigger">Trigger: Sudden darkness (LDR)</div>
+      <div class="anim-desc">Eyes widen beyond normal. Screen shakes left-right rapidly. Sweat drop appears. Scared melody.</div>
+      <span class="badge badge-sensor">LDR</span>
+    </div>
+
+    <!-- SLEEPY -->
+    <div class="anim-card" style="--accent:#7b2fff">
+      <div class="anim-id">ANIM_05</div>
+      <div class="mini-oled"><canvas id="c5" width="160" height="80"></canvas></div>
+      <div class="anim-name" style="color:#7b2fff">SLEEPY</div>
+      <div class="anim-trigger">Trigger: Power button / sleep mode</div>
+      <div class="anim-desc">Heavy eyelids drop halfway. Pupils droop downward. Z z Z bubbles float upper-right.</div>
+      <span class="badge badge-btn">BUTTON</span>
+    </div>
+
+    <!-- SQUINT -->
+    <div class="anim-card" style="--accent:#ffaa00">
+      <div class="anim-id">ANIM_06</div>
+      <div class="mini-oled"><canvas id="c6" width="160" height="80"></canvas></div>
+      <div class="anim-name" style="color:#ffaa00">SQUINT</div>
+      <div class="anim-trigger">Trigger: Sudden bright light (LDR)</div>
+      <div class="anim-desc">Eyes rapidly squint closed in response to brightness surge. Smooth lid close animation.</div>
+      <span class="badge badge-sensor">LDR</span>
+    </div>
+
+    <!-- HEART EYES -->
+    <div class="anim-card" style="--accent:#ff2d78">
+      <div class="anim-id">ANIM_07</div>
+      <div class="mini-oled"><canvas id="c7" width="160" height="80"></canvas></div>
+      <div class="anim-name" style="color:#ff2d78">HEART EYES</div>
+      <div class="anim-trigger">Trigger: Interact button</div>
+      <div class="anim-desc">Full hearts fill both eye frames. Gentle pulse beat animation. Plays happy melody.</div>
+      <span class="badge badge-btn">BUTTON</span>
+    </div>
+
+    <!-- LOOK LEFT -->
+    <div class="anim-card" style="--accent:#00ffe7">
+      <div class="anim-id">ANIM_08</div>
+      <div class="mini-oled"><canvas id="c8" width="160" height="80"></canvas></div>
+      <div class="anim-name" style="color:#00ffe7">LOOK LEFT</div>
+      <div class="anim-trigger">Trigger: Random idle</div>
+      <div class="anim-desc">Pupils slide to left edge of eye with easing. Hold for 2s. Return smoothly.</div>
+      <span class="badge badge-auto">RANDOM</span>
+    </div>
+
+    <!-- LOOK RIGHT -->
+    <div class="anim-card" style="--accent:#00ffe7">
+      <div class="anim-id">ANIM_09</div>
+      <div class="mini-oled"><canvas id="c9" width="160" height="80"></canvas></div>
+      <div class="anim-name" style="color:#00ffe7">LOOK RIGHT</div>
+      <div class="anim-trigger">Trigger: Random idle</div>
+      <div class="anim-desc">Mirror of Look Left. Pupils slide right with spring easing. Random delay before return.</div>
+      <span class="badge badge-auto">RANDOM</span>
+    </div>
+
+    <!-- WEATHER COLD -->
+    <div class="anim-card" style="--accent:#7b2fff">
+      <div class="anim-id">ANIM_10</div>
+      <div class="mini-oled"><canvas id="c10" width="160" height="80"></canvas></div>
+      <div class="anim-name" style="color:#7b2fff">COLD</div>
+      <div class="anim-trigger">Trigger: Temp ≤ 15°C</div>
+      <div class="anim-desc">Eyes squint from cold. Face shakes/shivers. Patchwork blanket drawn at bottom screen edge.</div>
+      <span class="badge badge-weather">WEATHER</span>
+    </div>
+
+    <!-- WEATHER HOT -->
+    <div class="anim-card" style="--accent:#ff6600">
+      <div class="anim-id">ANIM_11</div>
+      <div class="mini-oled"><canvas id="c11" width="160" height="80"></canvas></div>
+      <div class="anim-name" style="color:#ff6600">HOT</div>
+      <div class="anim-trigger">Trigger: Temp ≥ 28°C</div>
+      <div class="anim-desc">Sweat beads drop from eyes. Spinning fan blade drawn below. Wind lines from both sides.</div>
+      <span class="badge badge-weather">WEATHER</span>
+    </div>
+
+  </div>
+
+  <!-- State machine -->
+  <div class="state-section">
+    <div class="section-title">State Machine — Reactive Logic</div>
+    <table class="feat-table">
+      <thead>
+        <tr>
+          <th>STATE</th>
+          <th>ENTER CONDITION</th>
+          <th>EXIT CONDITION</th>
+          <th>ANIMATION PLAYED</th>
+          <th>SOUND</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td style="color:#00ffe7">IDLE</td>
+          <td>Default / after 8s from any state</td>
+          <td>Any trigger fires</td>
+          <td>IDLE, BLINK, LOOK_L/R (random)</td>
+          <td>None</td>
+        </tr>
+        <tr>
+          <td style="color:#00ff88">HAPPY</td>
+          <td>WiFi connected, timer done</td>
+          <td>8s timeout → IDLE</td>
+          <td>HAPPY (hands + bounce)</td>
+          <td>Happy melody</td>
+        </tr>
+        <tr>
+          <td style="color:#ff2d78">VERY HAPPY</td>
+          <td>BTN_INTERACT, 2h PIR absence</td>
+          <td>8s timeout → IDLE</td>
+          <td>VERY_HAPPY (hearts)</td>
+          <td>Happy melody (high)</td>
+        </tr>
+        <tr>
+          <td style="color:#ffaa00">SCARED</td>
+          <td>LDR delta &lt; –600 (sudden dark)</td>
+          <td>60 frames → IDLE</td>
+          <td>SCARED (shake + sweat)</td>
+          <td>Scared sound</td>
+        </tr>
+        <tr>
+          <td style="color:#ffaa00">BRIGHT</td>
+          <td>LDR delta &gt; +600 (sudden bright)</td>
+          <td>Squint anim ends → IDLE</td>
+          <td>SQUINT</td>
+          <td>Short pip</td>
+        </tr>
+        <tr>
+          <td style="color:#7b2fff">SLEEPY</td>
+          <td>BTN_POWER press</td>
+          <td>BTN_POWER again</td>
+          <td>SLEEPY (zzz loops)</td>
+          <td>Sleep melody</td>
+        </tr>
+        <tr>
+          <td style="color:#7b2fff">WEATHER_COLD</td>
+          <td>Fetched temp ≤ 15°C</td>
+          <td>80 frames → IDLE</td>
+          <td>WEATHER_COLD (blanket)</td>
+          <td>None</td>
+        </tr>
+        <tr>
+          <td style="color:#ff6600">WEATHER_HOT</td>
+          <td>Fetched temp ≥ 28°C</td>
+          <td>80 frames → IDLE</td>
+          <td>WEATHER_HOT (fan)</td>
+          <td>None</td>
+        </tr>
+        <tr>
+          <td style="color:#00aaff">WEATHER_RAIN</td>
+          <td>OWM code 500–599</td>
+          <td>80 frames → IDLE</td>
+          <td>WEATHER_RAIN (drops)</td>
+          <td>None</td>
+        </tr>
+        <tr>
+          <td style="color:#ff2d78">TIMER_RUNNING</td>
+          <td>BTN_EXTRA or web timer</td>
+          <td>Countdown hits zero</td>
+          <td>IDLE (timer bar on web)</td>
+          <td>Timer alarm when done</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Eye anatomy -->
+  <div class="section-title">Eye Anatomy — OLED Coordinate System</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:32px;margin-bottom:48px">
+    <div style="background:rgba(6,21,37,0.8);border:1px solid rgba(0,255,231,0.15);border-radius:16px;padding:24px">
+      <canvas id="eyeAnatomy" width="380" height="180" style="width:100%"></canvas>
+    </div>
+    <div style="background:rgba(6,21,37,0.8);border:1px solid rgba(0,255,231,0.15);border-radius:16px;padding:24px">
+      <div style="font-family:Orbitron,sans-serif;font-size:.7rem;letter-spacing:2px;margin-bottom:16px;color:rgba(0,255,231,0.6)">
+        EYE PARAMETERS
+      </div>
+      <table style="width:100%;font-size:.72rem;border-collapse:collapse">
+        <tr><td style="padding:6px 0;color:rgba(0,255,231,0.5)">Left Eye Centre X</td><td style="color:#00ffe7">36 px</td></tr>
+        <tr><td style="padding:6px 0;color:rgba(0,255,231,0.5)">Right Eye Centre X</td><td style="color:#00ffe7">92 px</td></tr>
+        <tr><td style="padding:6px 0;color:rgba(0,255,231,0.5)">Both Eyes Centre Y</td><td style="color:#00ffe7">30 px</td></tr>
+        <tr><td style="padding:6px 0;color:rgba(0,255,231,0.5)">Eye Width (ellipse a)</td><td style="color:#00ffe7">26 px</td></tr>
+        <tr><td style="padding:6px 0;color:rgba(0,255,231,0.5)">Eye Height (ellipse b)</td><td style="color:#00ffe7">22 px</td></tr>
+        <tr><td style="padding:6px 0;color:rgba(0,255,231,0.5)">Pupil Radius</td><td style="color:#00ffe7">5 px</td></tr>
+        <tr><td style="padding:6px 0;color:rgba(0,255,231,0.5)">Name Tag Y</td><td style="color:#00ffe7">56 px</td></tr>
+        <tr><td style="padding:6px 0;color:rgba(0,255,231,0.5)">OLED Resolution</td><td style="color:#00ffe7">128 × 64 px</td></tr>
+        <tr><td style="padding:6px 0;color:rgba(0,255,231,0.5)">Frame Rate</td><td style="color:#00ffe7">~8 fps (millis)</td></tr>
+        <tr><td style="padding:6px 0;color:rgba(0,255,231,0.5)">Eye Colour</td><td style="color:#00ffe7">White (SSD1306 mono)</td></tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <div class="poster-footer">
+    <div class="footer-logo">CHORDY</div>
+    <div class="footer-meta">
+      DESK COMPANION ROBOT · ESP32 + SSD1306 OLED<br>
+      Animation Design Spec · v1.0 · Arduino IDE
+    </div>
+  </div>
+
+</div>
+
+<script>
+// ── Mini OLED Canvas Animations ────────────────────────────────
+const canvases = [];
+let frame = 0;
+
+function initCanvas(id) {
+  const c = document.getElementById(id);
+  if (!c) return null;
+  const ctx = c.getContext('2d');
+  return { c, ctx };
+}
+
+function drawMiniEyes(ctx, w, h, pox, poy, blinkRatio, lids, color, extras) {
+  color = color || '#00ffe7';
+  ctx.fillStyle = '#000';
+  ctx.fillRect(0, 0, w, h);
+
+  const eyeW = w * 0.22, eyeH = h * 0.42 * blinkRatio;
+  const lCx = w * 0.33, rCx = w * 0.67, cy = h * 0.44;
+  const pr = w * 0.055;
+
+  [[lCx, cy], [rCx, cy]].forEach(([cx]) => {
+    ctx.save();
+    ctx.fillStyle = color;
+    ctx.shadowColor = color;
+    ctx.shadowBlur = 8;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, eyeW, eyeH, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eyelid
+    if (lids > 0) {
+      ctx.fillStyle = '#000';
+      ctx.shadowBlur = 0;
+      ctx.fillRect(cx - eyeW - 2, cy - eyeH - 2, eyeW * 2 + 4, lids * eyeH + 2);
+    }
+
+    // Pupil
+    ctx.fillStyle = '#000';
+    ctx.shadowBlur = 0;
+    ctx.beginPath();
+    ctx.arc(cx + pox, cy + poy, pr, 0, Math.PI * 2);
+    ctx.fill();
+    // Shine
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.beginPath();
+    ctx.arc(cx + pox + pr * 0.4, cy + poy - pr * 0.4, pr * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  });
+
+  ctx.shadowBlur = 0;
+  if (extras) extras(ctx, w, h);
+}
+
+const configs = [
+  // IDLE
+  (ctx, w, h, f) => {
+    const blink = f % 60 < 5 ? Math.max(0.15, 1 - (f%5)*0.2) : 1;
+    const pox = Math.sin(f * 0.04) * w * 0.04;
+    drawMiniEyes(ctx, w, h, pox, 0, blink, 0, '#00ffe7');
+    ctx.fillStyle = 'rgba(0,255,231,0.5)'; ctx.font = `7px 'Share Tech Mono',monospace`;
+    ctx.textAlign = 'center'; ctx.fillText('Chordy', w/2, h * 0.92);
+  },
+  // BLINK
+  (ctx, w, h, f) => {
+    const seq = [1, 0.7, 0.4, 0.15, 0.05, 0.15, 0.4, 0.7, 1];
+    const r = seq[f % 9];
+    drawMiniEyes(ctx, w, h, 0, 0, r, 0, '#00ffe7');
+  },
+  // HAPPY
+  (ctx, w, h, f) => {
+    const b = (f % 10 < 5) ? -h*0.06 : h*0.06;
+    drawMiniEyes(ctx, w, h, 0, b, 1, 0, '#00ff88', (ctx, w, h) => {
+      // hands
+      ctx.strokeStyle = '#00ff88'; ctx.lineWidth = 2;
+      const sw = (f % 10 < 5) ? 3 : -3;
+      ctx.beginPath(); ctx.moveTo(w*0.08, h*0.7); ctx.lineTo(w*0.04, h*0.9 + sw); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(w*0.92, h*0.7); ctx.lineTo(w*0.96, h*0.9 + sw); ctx.stroke();
+    });
+  },
+  // VERY HAPPY
+  (ctx, w, h, f) => {
+    ctx.fillStyle = '#000'; ctx.fillRect(0,0,w,h);
+    ctx.fillStyle = '#ff2d78';
+    const b = (f % 8 < 4) ? -h*0.08 : h*0.08;
+    const cx1 = w*0.33, cx2 = w*0.67, cy = h*0.44 + b;
+    // Hearts
+    [[cx1,cy],[cx2,cy]].forEach(([cx]) => {
+      ctx.save();
+      ctx.fillStyle = '#ff2d78'; ctx.shadowColor = '#ff2d78'; ctx.shadowBlur = 10;
+      for (let a = 0; a < Math.PI*2; a += 0.1) {
+        const x = cx + w*0.05*(16*Math.pow(Math.sin(a),3));
+        const y = cy - w*0.05*(13*Math.cos(a)-5*Math.cos(2*a)-2*Math.cos(3*a)-Math.cos(4*a));
+        ctx.fillRect(x, y, 1, 1);
+      }
+      ctx.restore();
+    });
+  },
+  // SCARED
+  (ctx, w, h, f) => {
+    const sx = (f % 4 < 2) ? -3 : 3;
+    drawMiniEyes(ctx, w, h, sx/w*10, 0, 1.18, 0, '#ffaa00', (ctx, w, h) => {
+      ctx.fillStyle = '#ffaa00';
+      ctx.beginPath();
+      ctx.arc(w*0.78, h*0.65 + f%6, 3, 0, Math.PI*2);
+      ctx.fill();
+    });
+  },
+  // SLEEPY
+  (ctx, w, h, f) => {
+    const lid = 0.55 + Math.sin(f * 0.1) * 0.05;
+    drawMiniEyes(ctx, w, h, 0, h*0.04, 1, lid, '#7b2fff', (ctx, w, h) => {
+      ctx.fillStyle = 'rgba(123,47,255,0.8)'; ctx.font = `8px 'Share Tech Mono'`;
+      const off = f % 30 / 30;
+      ctx.textAlign = 'center';
+      ctx.fillText('z', w*0.82, h*(0.2 + off*0.1));
+      ctx.fillText('Z', w*0.88, h*(0.12 + off*0.05));
+    });
+  },
+  // SQUINT
+  (ctx, w, h, f) => {
+    const lid = 0.3 + Math.abs(Math.sin(f * 0.12)) * 0.5;
+    drawMiniEyes(ctx, w, h, 0, 0, 0.3, lid, '#ffaa00');
+  },
+  // HEART EYES
+  (ctx, w, h, f) => {
+    ctx.fillStyle = '#000'; ctx.fillRect(0,0,w,h);
+    const pulse = 1 + Math.sin(f * 0.2) * 0.1;
+    const lCx = w*0.33, rCx = w*0.67, cy = h*0.44;
+    const eyeW = w*0.22*pulse, eyeH = h*0.38*pulse;
+    [lCx, rCx].forEach(cx => {
+      ctx.fillStyle = '#ff2d78'; ctx.shadowColor = '#ff2d78'; ctx.shadowBlur = 10;
+      ctx.beginPath(); ctx.ellipse(cx, cy, eyeW, eyeH, 0, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#000'; ctx.shadowBlur = 0;
+      // Simple heart
+      ctx.font = `${Math.round(eyeH)}px serif`; ctx.textAlign = 'center';
+      ctx.fillStyle = '#ff2d78';
+      ctx.font = `${Math.round(eyeH*1.2)}px serif`;
+      ctx.fillText('♥', cx, cy + eyeH * 0.35);
+    });
+    ctx.shadowBlur = 0;
+  },
+  // LOOK LEFT
+  (ctx, w, h, f) => {
+    const t = Math.min(1, (f % 20) / 8);
+    const pox = -w*0.08 * Math.min(1, t * 2);
+    drawMiniEyes(ctx, w, h, pox, 0, 1, 0, '#00ffe7');
+  },
+  // LOOK RIGHT
+  (ctx, w, h, f) => {
+    const pox = w * 0.08 * Math.min(1, ((f % 20) / 8) * 2);
+    drawMiniEyes(ctx, w, h, pox, 0, 1, 0, '#00ffe7');
+  },
+  // COLD
+  (ctx, w, h, f) => {
+    const sx = (f % 4 < 2) ? -1 : 1;
+    drawMiniEyes(ctx, w, h, sx, 0, 0.85, 0, '#7b2fff', (ctx, w, h) => {
+      for (let x = 0; x < w; x += 8) {
+        ctx.fillStyle = (Math.floor(x/8) % 2) ? '#7b2fff' : '#0a1e35';
+        ctx.fillRect(x, h*0.8, 8, h*0.2);
+      }
+      ctx.strokeStyle = '#7b2fff'; ctx.lineWidth = 1;
+      ctx.strokeRect(0, h*0.8, w, h*0.2);
+      ctx.fillStyle = '#7b2fff'; ctx.font = '7px monospace'; ctx.textAlign = 'left';
+      ctx.fillText('Brr..', 4, h*0.78);
+    });
+  },
+  // HOT
+  (ctx, w, h, f) => {
+    drawMiniEyes(ctx, w, h, 0, h*0.03, 1, 0, '#ff6600', (ctx, w, h) => {
+      // Fan
+      const cx = w/2, cy = h*0.85, r = h*0.1;
+      for (let b = 0; b < 3; b++) {
+        const a = f*0.3 + b*2.094;
+        ctx.fillStyle = 'rgba(255,102,0,0.7)';
+        ctx.beginPath();
+        ctx.moveTo(cx, cy);
+        ctx.arc(cx, cy, r, a, a + 0.9);
+        ctx.fill();
+      }
+      // Sweat
+      ctx.fillStyle = '#00aaff';
+      ctx.beginPath(); ctx.arc(w*0.18, h*0.72 + f%8, 2, 0, Math.PI*2); ctx.fill();
+      ctx.beginPath(); ctx.arc(w*0.82, h*0.72 + f%6, 2, 0, Math.PI*2); ctx.fill();
+    });
+  },
+];
+
+function tick() {
+  for (let i = 0; i < configs.length; i++) {
+    const el = document.getElementById('c' + i);
+    if (!el) continue;
+    const ctx = el.getContext('2d');
+    configs[i](ctx, el.width, el.height, frame);
+  }
+  frame++;
+  requestAnimationFrame(tick);
+}
+tick();
+
+// ── Eye anatomy diagram ────────────────────────────────────────
+const anat = document.getElementById('eyeAnatomy');
+if (anat) {
+  const ctx = anat.getContext('2d');
+  const W = anat.width, H = anat.height;
+  const scale = W / 128; // scale from OLED pixels
+
+  ctx.fillStyle = '#000'; ctx.fillRect(0,0,W,H);
+  // OLED boundary
+  ctx.strokeStyle = 'rgba(0,255,231,0.3)'; ctx.lineWidth = 1;
+  ctx.strokeRect(1, 1, W-2, H-2);
+
+  const EL = 36*scale, ER = 92*scale, CY = 30*scale;
+  const EW = 26*scale, EH = 22*scale;
+
+  // Axes
+  ctx.setLineDash([4,3]);
+  ctx.strokeStyle = 'rgba(0,255,231,0.2)'; ctx.lineWidth = 0.8;
+  ctx.beginPath(); ctx.moveTo(0,CY); ctx.lineTo(W,CY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(EL,0); ctx.lineTo(EL,H); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(ER,0); ctx.lineTo(ER,H); ctx.stroke();
+  ctx.setLineDash([]);
+
+  // Eyes
+  [EL, ER].forEach(cx => {
+    ctx.fillStyle = 'rgba(0,255,231,0.9)';
+    ctx.shadowColor = '#00ffe7'; ctx.shadowBlur = 6;
+    ctx.beginPath();
+    ctx.ellipse(cx, CY, EW, EH, 0, 0, Math.PI*2);
+    ctx.fill();
+
+    ctx.fillStyle = '#000'; ctx.shadowBlur = 0;
+    ctx.beginPath(); ctx.arc(cx, CY, 5*scale, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.9)';
+    ctx.beginPath(); ctx.arc(cx + 2*scale, CY - 2*scale, 1.5*scale, 0, Math.PI*2); ctx.fill();
+
+    // Dimension arrows
+    ctx.strokeStyle = 'rgba(0,255,231,0.4)'; ctx.lineWidth = 0.8;
+    ctx.setLineDash([2,2]);
+    ctx.beginPath(); ctx.moveTo(cx-EW, CY+EH+5); ctx.lineTo(cx+EW, CY+EH+5); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(cx+EW+5, CY-EH); ctx.lineTo(cx+EW+5, CY+EH); ctx.stroke();
+    ctx.setLineDash([]);
+  });
+
+  // Labels
+  ctx.font = `${10}px 'Share Tech Mono',monospace`;
+  ctx.fillStyle = 'rgba(0,255,231,0.6)'; ctx.textAlign = 'center';
+  ctx.fillText('cx=36', EL, H-6);
+  ctx.fillText('cx=92', ER, H-6);
+  ctx.textAlign = 'left';
+  ctx.fillText('cy=30', 2, CY-4);
+  ctx.fillText('W=26px', EL-EW+2, CY+EH+18);
+  ctx.fillStyle = 'rgba(0,255,231,0.5)';
+  ctx.fillText('H=22px', ER+EW+7, CY);
+  ctx.fillStyle = 'rgba(0,255,231,0.25)';
+  ctx.fillText('OLED 128×64', W/2-20, H-2);
+}
+</script>
+</body>
+</html>

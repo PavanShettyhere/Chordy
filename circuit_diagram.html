@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chordy — Circuit Diagram</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700&display=swap');
+  body {
+    background: #030912; color: #00ffe7; font-family: 'Share Tech Mono', monospace;
+    display: flex; flex-direction: column; align-items: center;
+    padding: 40px 20px; min-height: 100vh; margin: 0;
+  }
+  h1 {
+    font-family: 'Orbitron', sans-serif; font-size: 1.8rem; letter-spacing: 6px;
+    color: #00ffe7; text-shadow: 0 0 20px rgba(0,255,231,0.6);
+    margin-bottom: 8px; text-transform: uppercase;
+  }
+  .sub { color: rgba(0,255,231,0.5); font-size: .85rem; letter-spacing: 3px; margin-bottom: 40px; }
+  svg { max-width: 100%; border: 1px solid rgba(0,255,231,0.2); border-radius: 16px; }
+
+  /* Pin legend table */
+  .legend {
+    margin-top: 40px; width: 100%; max-width: 900px;
+    border-collapse: collapse;
+  }
+  .legend th {
+    background: rgba(0,255,231,0.1); color: #00ffe7;
+    font-family: 'Orbitron', sans-serif; font-size: .7rem;
+    letter-spacing: 2px; padding: 10px 16px; text-align: left;
+    border: 1px solid rgba(0,255,231,0.2);
+  }
+  .legend td {
+    padding: 8px 16px; border: 1px solid rgba(0,255,231,0.1);
+    font-size: .8rem; color: rgba(0,255,231,0.85);
+  }
+  .legend tr:hover td { background: rgba(0,255,231,0.05); }
+  .pin { color: #ff2d78; font-weight: bold; }
+  .comp { color: #7b2fff; }
+  .wire-cyan { color: #00ffe7; }
+  .wire-red  { color: #ff2d78; }
+  .wire-gnd  { color: #888; }
+</style>
+</head>
+<body>
+<h1>CHORDY</h1>
+<p class="sub">Circuit Schematic — ESP32 Desk Companion Robot</p>
+
+<svg viewBox="0 0 900 640" xmlns="http://www.w3.org/2000/svg" width="900">
+  <defs>
+    <filter id="glow">
+      <feGaussianBlur stdDeviation="3" result="coloredBlur"/>
+      <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <filter id="glow2">
+      <feGaussianBlur stdDeviation="6" result="coloredBlur"/>
+      <feMerge><feMergeNode in="coloredBlur"/><feMergeNode in="SourceGraphic"/></feMerge>
+    </filter>
+    <marker id="arrow" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L6,3 z" fill="#00ffe7" opacity="0.6"/>
+    </marker>
+  </defs>
+
+  <!-- Background -->
+  <rect width="900" height="640" fill="#030912"/>
+  <!-- Grid -->
+  <g opacity="0.04" stroke="#00ffe7" stroke-width="0.5">
+    <g id="vlines">
+      <line x1="0" y1="0" x2="0" y2="640"/>
+      <line x1="30" y1="0" x2="30" y2="640"/>
+      <line x1="60" y1="0" x2="60" y2="640"/>
+      <line x1="90" y1="0" x2="90" y2="640"/>
+      <line x1="120" y1="0" x2="120" y2="640"/>
+      <line x1="150" y1="0" x2="150" y2="640"/>
+      <line x1="180" y1="0" x2="180" y2="640"/>
+      <line x1="210" y1="0" x2="210" y2="640"/>
+      <line x1="240" y1="0" x2="240" y2="640"/>
+      <line x1="270" y1="0" x2="270" y2="640"/>
+      <line x1="300" y1="0" x2="300" y2="640"/>
+      <line x1="330" y1="0" x2="330" y2="640"/>
+      <line x1="360" y1="0" x2="360" y2="640"/>
+      <line x1="390" y1="0" x2="390" y2="640"/>
+      <line x1="420" y1="0" x2="420" y2="640"/>
+      <line x1="450" y1="0" x2="450" y2="640"/>
+      <line x1="480" y1="0" x2="480" y2="640"/>
+      <line x1="510" y1="0" x2="510" y2="640"/>
+      <line x1="540" y1="0" x2="540" y2="640"/>
+      <line x1="570" y1="0" x2="570" y2="640"/>
+      <line x1="600" y1="0" x2="600" y2="640"/>
+      <line x1="630" y1="0" x2="630" y2="640"/>
+      <line x1="660" y1="0" x2="660" y2="640"/>
+      <line x1="690" y1="0" x2="690" y2="640"/>
+      <line x1="720" y1="0" x2="720" y2="640"/>
+      <line x1="750" y1="0" x2="750" y2="640"/>
+      <line x1="780" y1="0" x2="780" y2="640"/>
+      <line x1="810" y1="0" x2="810" y2="640"/>
+      <line x1="840" y1="0" x2="840" y2="640"/>
+      <line x1="870" y1="0" x2="870" y2="640"/>
+      <line x1="900" y1="0" x2="900" y2="640"/>
+    </g>
+    <g id="hlines">
+      <line x1="0" y1="30" x2="900" y2="30"/>
+      <line x1="0" y1="60" x2="900" y2="60"/>
+      <line x1="0" y1="90" x2="900" y2="90"/>
+      <line x1="0" y1="120" x2="900" y2="120"/>
+      <line x1="0" y1="150" x2="900" y2="150"/>
+      <line x1="0" y1="180" x2="900" y2="180"/>
+      <line x1="0" y1="210" x2="900" y2="210"/>
+      <line x1="0" y1="240" x2="900" y2="240"/>
+      <line x1="0" y1="270" x2="900" y2="270"/>
+      <line x1="0" y1="300" x2="900" y2="300"/>
+      <line x1="0" y1="330" x2="900" y2="330"/>
+      <line x1="0" y1="360" x2="900" y2="360"/>
+      <line x1="0" y1="390" x2="900" y2="390"/>
+      <line x1="0" y1="420" x2="900" y2="420"/>
+      <line x1="0" y1="450" x2="900" y2="450"/>
+      <line x1="0" y1="480" x2="900" y2="480"/>
+      <line x1="0" y1="510" x2="900" y2="510"/>
+      <line x1="0" y1="540" x2="900" y2="540"/>
+      <line x1="0" y1="570" x2="900" y2="570"/>
+      <line x1="0" y1="600" x2="900" y2="600"/>
+      <line x1="0" y1="630" x2="900" y2="630"/>
+    </g>
+  </g>
+
+  <!-- ═══ ESP32 Dev Board (centre) ═══ -->
+  <g filter="url(#glow)">
+    <rect x="350" y="180" width="200" height="280" rx="10" ry="10"
+          fill="#061525" stroke="#00ffe7" stroke-width="2"/>
+  </g>
+  <text x="450" y="205" text-anchor="middle" fill="#00ffe7" font-size="13"
+        font-family="Orbitron,sans-serif" font-weight="700" letter-spacing="3">ESP32</text>
+  <text x="450" y="220" text-anchor="middle" fill="rgba(0,255,231,0.5)" font-size="9"
+        font-family="Share Tech Mono,monospace">Dev Board</text>
+
+  <!-- Left side pins (L→R: GPIO4,5,13,14,17,18,19) -->
+  <!-- Pin dots on left edge -->
+  <g fill="#00ffe7" filter="url(#glow)">
+    <circle cx="350" cy="245" r="4"/> <!-- GPIO21 SDA -->
+    <circle cx="350" cy="265" r="4"/> <!-- GPIO22 SCL -->
+    <circle cx="350" cy="285" r="4"/> <!-- GPIO17 DHT -->
+    <circle cx="350" cy="305" r="4"/> <!-- GPIO34 LDR -->
+    <circle cx="350" cy="325" r="4"/> <!-- GPIO19 PIR -->
+    <circle cx="350" cy="345" r="4"/> <!-- GPIO18 BUZ -->
+    <circle cx="350" cy="380" r="4"/> <!-- 3.3V -->
+    <circle cx="350" cy="400" r="4"/> <!-- GND -->
+    <circle cx="350" cy="420" r="4"/> <!-- 5V -->
+  </g>
+  <!-- Right side pins -->
+  <g fill="#ff2d78" filter="url(#glow)">
+    <circle cx="550" cy="245" r="4"/> <!-- GPIO4  BTN_POWER -->
+    <circle cx="550" cy="265" r="4"/> <!-- GPIO5  BTN_SELECT -->
+    <circle cx="550" cy="285" r="4"/> <!-- GPIO13 BTN_INTERACT -->
+    <circle cx="550" cy="305" r="4"/> <!-- GPIO14 BTN_EXTRA -->
+  </g>
+
+  <!-- Pin labels -->
+  <g font-family="Share Tech Mono,monospace" font-size="9">
+    <text x="340" y="248" text-anchor="end" fill="rgba(0,255,231,0.8)">GPIO21 SDA</text>
+    <text x="340" y="268" text-anchor="end" fill="rgba(0,255,231,0.8)">GPIO22 SCL</text>
+    <text x="340" y="288" text-anchor="end" fill="rgba(0,255,231,0.8)">GPIO17</text>
+    <text x="340" y="308" text-anchor="end" fill="rgba(0,255,231,0.8)">GPIO34 ADC</text>
+    <text x="340" y="328" text-anchor="end" fill="rgba(0,255,231,0.8)">GPIO19</text>
+    <text x="340" y="348" text-anchor="end" fill="rgba(0,255,231,0.8)">GPIO18 PWM</text>
+    <text x="340" y="383" text-anchor="end" fill="#ff4444">3.3V</text>
+    <text x="340" y="403" text-anchor="end" fill="#888">GND</text>
+    <text x="340" y="423" text-anchor="end" fill="#ff8800">5V (VIN)</text>
+    <text x="560" y="248" fill="rgba(255,45,120,0.9)">GPIO4</text>
+    <text x="560" y="268" fill="rgba(255,45,120,0.9)">GPIO5</text>
+    <text x="560" y="288" fill="rgba(255,45,120,0.9)">GPIO13</text>
+    <text x="560" y="308" fill="rgba(255,45,120,0.9)">GPIO14</text>
+  </g>
+
+  <!-- ═══ OLED Display (top left) ═══ -->
+  <g filter="url(#glow)">
+    <rect x="60" y="60" width="120" height="70" rx="8" fill="#061525" stroke="#7b2fff" stroke-width="1.5"/>
+    <!-- OLED screen area -->
+    <rect x="70" y="68" width="100" height="54" rx="4" fill="#000" stroke="#7b2fff" stroke-width="0.5" opacity="0.8"/>
+    <!-- Fake eye icons on oled -->
+    <ellipse cx="100" cy="95" rx="10" ry="8" fill="#7b2fff" opacity="0.7"/>
+    <ellipse cx="140" cy="95" rx="10" ry="8" fill="#7b2fff" opacity="0.7"/>
+    <circle cx="100" cy="95" r="3" fill="#000"/>
+    <circle cx="140" cy="95" r="3" fill="#000"/>
+    <circle cx="102" cy="93" r="1" fill="#fff"/>
+    <circle cx="142" cy="93" r="1" fill="#fff"/>
+  </g>
+  <text x="120" y="145" text-anchor="middle" fill="#7b2fff" font-size="10"
+        font-family="Orbitron,sans-serif" letter-spacing="1">OLED SSD1306</text>
+  <text x="120" y="157" text-anchor="middle" fill="rgba(123,47,255,0.6)" font-size="8"
+        font-family="Share Tech Mono,monospace">I2C 0x3C · 128×64</text>
+
+  <!-- OLED wires to ESP32 -->
+  <!-- SDA wire (GPIO21) -->
+  <polyline points="180,88 260,88 260,245 350,245" fill="none" stroke="#7b2fff"
+            stroke-width="1.5" stroke-dasharray="4,2" opacity="0.8"/>
+  <!-- SCL wire (GPIO22) -->
+  <polyline points="180,105 270,105 270,265 350,265" fill="none" stroke="#7b2fff"
+            stroke-width="1.5" stroke-dasharray="4,2" opacity="0.6"/>
+  <!-- VCC wire -->
+  <polyline points="180,75 290,75 290,380 350,380" fill="none" stroke="#ff4444"
+            stroke-width="1.2" opacity="0.7"/>
+  <!-- GND wire -->
+  <polyline points="180,112 280,112 280,400 350,400" fill="none" stroke="#888"
+            stroke-width="1.2" opacity="0.7"/>
+  <text x="70" y="168" fill="rgba(123,47,255,0.7)" font-size="7" font-family="Share Tech Mono">SDA→GPIO21</text>
+  <text x="70" y="178" fill="rgba(123,47,255,0.6)" font-size="7" font-family="Share Tech Mono">SCL→GPIO22</text>
+
+  <!-- ═══ DHT11 (top centre-left) ═══ -->
+  <g filter="url(#glow)">
+    <rect x="200" y="55" width="80" height="55" rx="6" fill="#061525" stroke="#00ff88" stroke-width="1.5"/>
+  </g>
+  <text x="240" y="80" text-anchor="middle" fill="#00ff88" font-size="10"
+        font-family="Orbitron,sans-serif" letter-spacing="1">DHT11</text>
+  <text x="240" y="95" text-anchor="middle" fill="rgba(0,255,136,0.6)" font-size="8"
+        font-family="Share Tech Mono">Temp / Hum</text>
+  <!-- DHT pins -->
+  <circle cx="212" cy="110" r="3" fill="#00ff88"/>
+  <circle cx="228" cy="110" r="3" fill="#ff4444"/>
+  <circle cx="244" cy="110" r="3" fill="#00ffe7"/>
+  <circle cx="260" cy="110" r="3" fill="#888"/>
+  <text x="207" y="122" fill="rgba(0,255,136,0.6)" font-size="7" font-family="Share Tech Mono">GND</text>
+  <text x="222" y="122" fill="rgba(255,68,68,0.8)" font-size="7" font-family="Share Tech Mono">VCC</text>
+  <text x="238" y="122" fill="rgba(0,255,231,0.8)" font-size="7" font-family="Share Tech Mono">DAT</text>
+  <!-- DHT wire to GPIO17 -->
+  <polyline points="244,110 244,160 310,160 310,285 350,285" fill="none"
+            stroke="#00ff88" stroke-width="1.5" stroke-dasharray="4,2" opacity="0.8"/>
+
+  <!-- ═══ LDR Module (left mid) ═══ -->
+  <g filter="url(#glow)">
+    <rect x="55" y="280" width="100" height="60" rx="6" fill="#061525" stroke="#ffaa00" stroke-width="1.5"/>
+  </g>
+  <text x="105" y="303" text-anchor="middle" fill="#ffaa00" font-size="10"
+        font-family="Orbitron,sans-serif" letter-spacing="1">LDR</text>
+  <text x="105" y="316" text-anchor="middle" fill="rgba(255,170,0,0.6)" font-size="8"
+        font-family="Share Tech Mono">Analog Module</text>
+  <!-- LDR pins -->
+  <circle cx="75" cy="340" r="3" fill="#ff4444"/>
+  <circle cx="95" cy="340" r="3" fill="#888"/>
+  <circle cx="115" cy="340" r="3" fill="#ffaa00"/>
+  <circle cx="135" cy="340" r="3" fill="#444"/>
+  <text x="68"  y="352" fill="rgba(255,68,68,0.7)" font-size="7" font-family="Share Tech Mono">VCC</text>
+  <text x="88"  y="352" fill="rgba(136,136,136,0.7)" font-size="7" font-family="Share Tech Mono">GND</text>
+  <text x="108" y="352" fill="rgba(255,170,0,0.8)" font-size="7" font-family="Share Tech Mono">AO</text>
+  <text x="126" y="352" fill="rgba(68,68,68,0.7)" font-size="7" font-family="Share Tech Mono">DO</text>
+  <!-- LDR AO → GPIO34 -->
+  <polyline points="115,340 115,370 320,370 320,305 350,305" fill="none"
+            stroke="#ffaa00" stroke-width="1.5" stroke-dasharray="4,2" opacity="0.8"/>
+
+  <!-- ═══ PIR Sensor (bottom left) ═══ -->
+  <g filter="url(#glow)">
+    <rect x="55" y="420" width="100" height="60" rx="6" fill="#061525" stroke="#ff6600" stroke-width="1.5"/>
+    <circle cx="105" cy="447" r="16" fill="none" stroke="#ff6600" stroke-width="1" opacity="0.5"/>
+    <circle cx="105" cy="447" r="10" fill="#ff6600" opacity="0.3"/>
+  </g>
+  <text x="105" y="430" text-anchor="middle" fill="#ff6600" font-size="10"
+        font-family="Orbitron,sans-serif" letter-spacing="1">HC-SR501</text>
+  <text x="105" y="443" text-anchor="middle" fill="rgba(255,102,0,0.6)" font-size="8"
+        font-family="Share Tech Mono">PIR Motion</text>
+  <!-- PIR pins -->
+  <circle cx="80"  cy="480" r="3" fill="#ff8800"/>
+  <circle cx="105" cy="480" r="3" fill="#888"/>
+  <circle cx="130" cy="480" r="3" fill="#00ffe7"/>
+  <text x="68"  y="492" fill="rgba(255,136,0,0.7)" font-size="7" font-family="Share Tech Mono">5V</text>
+  <text x="97"  y="492" fill="rgba(136,136,136,0.7)" font-size="7" font-family="Share Tech Mono">GND</text>
+  <text x="122" y="492" fill="rgba(0,255,231,0.8)" font-size="7" font-family="Share Tech Mono">OUT</text>
+  <!-- PIR OUT → GPIO19 -->
+  <polyline points="130,480 130,505 330,505 330,325 350,325" fill="none"
+            stroke="#ff6600" stroke-width="1.5" stroke-dasharray="4,2" opacity="0.8"/>
+  <!-- PIR 5V → ESP32 5V -->
+  <polyline points="80,480 80,520 340,520 340,420 350,420" fill="none"
+            stroke="#ff8800" stroke-width="1.2" opacity="0.6"/>
+
+  <!-- ═══ Buzzer (bottom centre) ═══ -->
+  <g filter="url(#glow)">
+    <rect x="340" y="520" width="80" height="55" rx="6" fill="#061525" stroke="#ff2d78" stroke-width="1.5"/>
+    <circle cx="380" cy="547" r="14" fill="none" stroke="#ff2d78" stroke-width="1.5"/>
+    <circle cx="380" cy="547" r="7" fill="#ff2d78" opacity="0.4"/>
+  </g>
+  <text x="380" y="534" text-anchor="middle" fill="#ff2d78" font-size="10"
+        font-family="Orbitron,sans-serif" letter-spacing="1">BUZZER</text>
+  <text x="380" y="572" text-anchor="middle" fill="rgba(255,45,120,0.6)" font-size="8"
+        font-family="Share Tech Mono">GPIO18 PWM</text>
+  <!-- Buzzer + → GPIO18 -->
+  <polyline points="380,520 380,500 390,500 390,345 350,345" fill="none"
+            stroke="#ff2d78" stroke-width="1.5" stroke-dasharray="4,2" opacity="0.8"/>
+  <!-- Buzzer - → GND -->
+  <polyline points="360,520 360,510 395,510 395,400 350,400" fill="none"
+            stroke="#888" stroke-width="1.2" opacity="0.6"/>
+
+  <!-- ═══ Buttons (right side) ═══ -->
+  <!-- BTN_POWER -->
+  <g filter="url(#glow)">
+    <rect x="640" y="195" width="100" height="45" rx="6" fill="#061525" stroke="#ff2d78" stroke-width="1.5"/>
+    <rect x="680" y="208" width="20" height="20" rx="3" fill="#ff2d78" opacity="0.5"/>
+  </g>
+  <text x="690" y="222" text-anchor="middle" fill="#ff2d78" font-size="9"
+        font-family="Orbitron,sans-serif">POWER</text>
+  <text x="690" y="233" text-anchor="middle" fill="rgba(255,45,120,0.5)" font-size="7"
+        font-family="Share Tech Mono">GPIO4</text>
+  <!-- Wire BTN_POWER → GPIO4 -->
+  <polyline points="640,217 600,217 600,245 550,245" fill="none"
+            stroke="#ff2d78" stroke-width="1.5" stroke-dasharray="4,2" opacity="0.8"/>
+
+  <!-- BTN_SELECT -->
+  <g filter="url(#glow)">
+    <rect x="640" y="248" width="100" height="45" rx="6" fill="#061525" stroke="#ff2d78" stroke-width="1.5"/>
+    <rect x="680" y="261" width="20" height="20" rx="3" fill="#ff2d78" opacity="0.4"/>
+  </g>
+  <text x="690" y="275" text-anchor="middle" fill="#ff2d78" font-size="9"
+        font-family="Orbitron,sans-serif">SELECT</text>
+  <text x="690" y="286" text-anchor="middle" fill="rgba(255,45,120,0.5)" font-size="7"
+        font-family="Share Tech Mono">GPIO5</text>
+  <polyline points="640,270 610,270 610,265 550,265" fill="none"
+            stroke="#ff2d78" stroke-width="1.5" stroke-dasharray="4,2" opacity="0.8"/>
+
+  <!-- BTN_INTERACT -->
+  <g filter="url(#glow)">
+    <rect x="640" y="301" width="100" height="45" rx="6" fill="#061525" stroke="#ff2d78" stroke-width="1.5"/>
+    <rect x="680" y="314" width="20" height="20" rx="3" fill="#ff2d78" opacity="0.5"/>
+  </g>
+  <text x="690" y="328" text-anchor="middle" fill="#ff2d78" font-size="9"
+        font-family="Orbitron,sans-serif">INTERACT</text>
+  <text x="690" y="339" text-anchor="middle" fill="rgba(255,45,120,0.5)" font-size="7"
+        font-family="Share Tech Mono">GPIO13</text>
+  <polyline points="640,323 615,323 615,285 550,285" fill="none"
+            stroke="#ff2d78" stroke-width="1.5" stroke-dasharray="4,2" opacity="0.8"/>
+
+  <!-- BTN_EXTRA -->
+  <g filter="url(#glow)">
+    <rect x="640" y="354" width="100" height="45" rx="6" fill="#061525" stroke="#ff2d78" stroke-width="1.5"/>
+    <rect x="680" y="367" width="20" height="20" rx="3" fill="#ff2d78" opacity="0.3"/>
+  </g>
+  <text x="690" y="381" text-anchor="middle" fill="#ff2d78" font-size="9"
+        font-family="Orbitron,sans-serif">EXTRA/TIMER</text>
+  <text x="690" y="392" text-anchor="middle" fill="rgba(255,45,120,0.5)" font-size="7"
+        font-family="Share Tech Mono">GPIO14</text>
+  <polyline points="640,376 620,376 620,305 550,305" fill="none"
+            stroke="#ff2d78" stroke-width="1.5" stroke-dasharray="4,2" opacity="0.8"/>
+
+  <!-- GND rail for buttons -->
+  <line x1="750" y1="217" x2="750" y2="392" stroke="#888" stroke-width="1" opacity="0.4"/>
+  <line x1="740" y1="217" x2="750" y2="217" stroke="#888" stroke-width="1" opacity="0.4"/>
+  <line x1="740" y1="270" x2="750" y2="270" stroke="#888" stroke-width="1" opacity="0.4"/>
+  <line x1="740" y1="323" x2="750" y2="323" stroke="#888" stroke-width="1" opacity="0.4"/>
+  <line x1="740" y1="376" x2="750" y2="376" stroke="#888" stroke-width="1" opacity="0.4"/>
+  <polyline points="750,392 760,392 760,560 395,560 395,400 350,400" fill="none"
+            stroke="#888" stroke-width="1.2" opacity="0.5"/>
+  <text x="755" y="488" fill="rgba(136,136,136,0.6)" font-size="7"
+        font-family="Share Tech Mono" transform="rotate(90,755,488)">GND RAIL</text>
+
+  <!-- Power rail (3.3V) legend -->
+  <line x1="295" y1="60" x2="295" y2="420" stroke="#ff4444" stroke-width="1" opacity="0.3"/>
+  <text x="297" y="120" fill="rgba(255,68,68,0.5)" font-size="7"
+        font-family="Share Tech Mono" transform="rotate(90,297,120)">3.3V RAIL</text>
+
+  <!-- GND bus -->
+  <line x1="285" y1="60" x2="285" y2="420" stroke="#888" stroke-width="1" opacity="0.3"/>
+  <text x="287" y="200" fill="rgba(136,136,136,0.5)" font-size="7"
+        font-family="Share Tech Mono" transform="rotate(90,287,200)">GND BUS</text>
+
+  <!-- Title overlay -->
+  <text x="450" y="30" text-anchor="middle" fill="rgba(0,255,231,0.3)" font-size="11"
+        font-family="Orbitron,sans-serif" letter-spacing="4">CHORDY SCHEMATIC v1.0</text>
+
+  <!-- Wire colour legend -->
+  <g transform="translate(550, 480)">
+    <rect x="0" y="0" width="180" height="105" rx="8" fill="rgba(6,21,37,0.9)"
+          stroke="rgba(0,255,231,0.2)" stroke-width="1"/>
+    <text x="10" y="16" fill="rgba(0,255,231,0.7)" font-size="8"
+          font-family="Orbitron,sans-serif" letter-spacing="2">WIRE LEGEND</text>
+    <line x1="10" y1="28" x2="30" y2="28" stroke="#7b2fff" stroke-width="2" stroke-dasharray="4,2"/>
+    <text x="35" y="31" fill="rgba(123,47,255,0.9)" font-size="8" font-family="Share Tech Mono">I2C (OLED)</text>
+    <line x1="10" y1="44" x2="30" y2="44" stroke="#00ff88" stroke-width="2" stroke-dasharray="4,2"/>
+    <text x="35" y="47" fill="rgba(0,255,136,0.9)" font-size="8" font-family="Share Tech Mono">DHT11 Data</text>
+    <line x1="10" y1="60" x2="30" y2="60" stroke="#ffaa00" stroke-width="2" stroke-dasharray="4,2"/>
+    <text x="35" y="63" fill="rgba(255,170,0,0.9)" font-size="8" font-family="Share Tech Mono">LDR Analog</text>
+    <line x1="10" y1="76" x2="30" y2="76" stroke="#ff6600" stroke-width="2" stroke-dasharray="4,2"/>
+    <text x="35" y="79" fill="rgba(255,102,0,0.9)" font-size="8" font-family="Share Tech Mono">PIR Signal</text>
+    <line x1="10" y1="92" x2="30" y2="92" stroke="#ff2d78" stroke-width="2" stroke-dasharray="4,2"/>
+    <text x="35" y="95" fill="rgba(255,45,120,0.9)" font-size="8" font-family="Share Tech Mono">Buttons / Buzzer</text>
+  </g>
+</svg>
+
+<!-- Pin table -->
+<table class="legend">
+  <thead>
+    <tr>
+      <th>COMPONENT</th>
+      <th>PIN / SIGNAL</th>
+      <th>ESP32 GPIO</th>
+      <th>VOLTAGE</th>
+      <th>NOTES</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr><td class="comp">OLED SSD1306</td><td>SDA</td><td class="pin">GPIO 21</td><td>3.3V</td><td>I2C Data</td></tr>
+    <tr><td class="comp">OLED SSD1306</td><td>SCL</td><td class="pin">GPIO 22</td><td>3.3V</td><td>I2C Clock</td></tr>
+    <tr><td class="comp">OLED SSD1306</td><td>VCC</td><td class="pin">3.3V</td><td>3.3V</td><td>Address: 0x3C</td></tr>
+    <tr><td class="comp">DHT11</td><td>DATA</td><td class="pin">GPIO 17</td><td>3.3V</td><td>10kΩ pull-up to 3.3V</td></tr>
+    <tr><td class="comp">LDR Module</td><td>AO (Analog Out)</td><td class="pin">GPIO 34</td><td>3.3V</td><td>ADC1_CH6 — input only</td></tr>
+    <tr><td class="comp">PIR HC-SR501</td><td>OUT</td><td class="pin">GPIO 19</td><td>3.3V logic</td><td>Module VCC = 5V</td></tr>
+    <tr><td class="comp">Buzzer</td><td>(+) positive</td><td class="pin">GPIO 18</td><td>3.3V PWM</td><td>PWM via LEDC channel 0</td></tr>
+    <tr><td class="comp">BTN_POWER</td><td>Signal</td><td class="pin">GPIO 4</td><td>Active LOW</td><td>Internal pull-up enabled</td></tr>
+    <tr><td class="comp">BTN_SELECT</td><td>Signal</td><td class="pin">GPIO 5</td><td>Active LOW</td><td>Internal pull-up enabled</td></tr>
+    <tr><td class="comp">BTN_INTERACT</td><td>Signal</td><td class="pin">GPIO 13</td><td>Active LOW</td><td>Internal pull-up enabled</td></tr>
+    <tr><td class="comp">BTN_EXTRA</td><td>Signal</td><td class="pin">GPIO 14</td><td>Active LOW</td><td>Internal pull-up enabled</td></tr>
+  </tbody>
+</table>
+
+<p style="margin-top:24px;font-size:.75rem;color:rgba(0,255,231,0.4);letter-spacing:2px">
+  CHORDY DESK ROBOT · CIRCUIT DIAGRAM · ALL RIGHTS TO MAKER
+</p>
+</body>
+</html>
